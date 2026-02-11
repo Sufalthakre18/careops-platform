@@ -1,0 +1,710 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+// ==========================================
+// USER MANAGEMENT
+// ==========================================
+
+enum UserRole {
+  OWNER
+  STAFF
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
+model User {
+  id        String     @id @default(uuid())
+  email     String     @unique
+  password  String
+  firstName String?
+  lastName  String?
+  role      UserRole   @default(STAFF)
+  status    UserStatus @default(PENDING)
+  
+  // Relations
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  permissions StaffPermission?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([email])
+  @@index([workspaceId])
+  @@map("users")
+}
+
+// ==========================================
+// WORKSPACE (BUSINESS)
+// ==========================================
+
+enum WorkspaceStatus {
+  SETUP
+  ACTIVE
+  INACTIVE
+}
+
+model Workspace {
+  id          String          @id @default(uuid())
+  businessName String
+  address     String?
+  city        String?
+  state       String?
+  zipCode     String?
+  country     String?
+  timezone    String          @default("UTC")
+  contactEmail String
+  contactPhone String?
+  status      WorkspaceStatus @default(SETUP)
+  
+  // Onboarding checklist
+  emailSetup      Boolean @default(false)
+  smsSetup        Boolean @default(false)
+  contactFormSetup Boolean @default(false)
+  bookingSetup    Boolean @default(false)
+  formsSetup      Boolean @default(false)
+  inventorySetup  Boolean @default(false)
+  staffSetup      Boolean @default(false)
+  
+  // Relations
+  users           User[]
+  integrations    Integration[]
+  contacts        Contact[]
+  conversations   Conversation[]
+  bookingTypes    BookingType[]
+  bookings        Booking[]
+  forms           Form[]
+  formSubmissions FormSubmission[]
+  inventoryItems  InventoryItem[]
+  alerts          Alert[]
+  automationRules AutomationRule[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([status])
+  @@map("workspaces")
+}
+
+// ==========================================
+// STAFF PERMISSIONS
+// ==========================================
+
+model StaffPermission {
+  id              String  @id @default(uuid())
+  userId          String  @unique
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  canAccessInbox      Boolean @default(true)
+  canManageBookings   Boolean @default(true)
+  canViewForms        Boolean @default(true)
+  canManageForms      Boolean @default(false)
+  canViewInventory    Boolean @default(true)
+  canManageInventory  Boolean @default(false)
+  canManageContacts   Boolean @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("staff_permissions")
+}
+
+// ==========================================
+// INTEGRATIONS
+// ==========================================
+
+enum IntegrationType {
+  EMAIL
+  SMS
+  CALENDAR
+  FORM
+  STORAGE
+  WEBHOOK
+}
+
+enum IntegrationStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
+
+model Integration {
+  id            String            @id @default(uuid())
+  workspaceId   String
+  workspace     Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  type          IntegrationType
+  provider      String            // e.g., "resend", "twilio", "google_calendar"
+  status        IntegrationStatus @default(DISCONNECTED)
+  
+  config        Json              // Encrypted credentials and settings
+  
+  lastSyncAt    DateTime?
+  errorMessage  String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([workspaceId, type, provider])
+  @@index([workspaceId])
+  @@map("integrations")
+}
+
+// ==========================================
+// CONTACTS (LEADS/CUSTOMERS)
+// ==========================================
+
+enum ContactSource {
+  CONTACT_FORM
+  BOOKING_FORM
+  MANUAL
+  IMPORT
+}
+
+enum ContactStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  CONVERTED
+  INACTIVE
+}
+
+model Contact {
+  id          String        @id @default(uuid())
+  workspaceId String
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  firstName   String?
+  lastName    String?
+  email       String?
+  phone       String?
+  source      ContactSource @default(CONTACT_FORM)
+  status      ContactStatus @default(NEW)
+  
+  metadata    Json?         // Additional custom fields
+  
+  // Relations
+  conversations   Conversation[]
+  bookings        Booking[]
+  formSubmissions FormSubmission[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([workspaceId])
+  @@index([email])
+  @@index([status])
+  @@map("contacts")
+}
+
+// ==========================================
+// CONVERSATIONS (INBOX)
+// ==========================================
+
+enum ConversationStatus {
+  OPEN
+  PENDING
+  CLOSED
+}
+
+model Conversation {
+  id          String             @id @default(uuid())
+  workspaceId String
+  workspace   Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  contactId   String
+  contact     Contact            @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  
+  subject     String?
+  status      ConversationStatus @default(OPEN)
+  
+  lastMessageAt DateTime         @default(now())
+  
+  // Relations
+  messages    Message[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([workspaceId])
+  @@index([contactId])
+  @@index([status])
+  @@map("conversations")
+}
+
+// ==========================================
+// MESSAGES
+// ==========================================
+
+enum MessageChannel {
+  EMAIL
+  SMS
+  SYSTEM
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+model Message {
+  id             String           @id @default(uuid())
+  conversationId String
+  conversation   Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  channel        MessageChannel
+  direction      MessageDirection
+  
+  subject        String?
+  body           String           @db.Text
+  
+  sender         String?          // Email or phone
+  recipient      String?          // Email or phone
+  
+  isAutomated    Boolean          @default(false)
+  isRead         Boolean          @default(false)
+  
+  metadata       Json?            // Email headers, delivery status, etc.
+  
+  createdAt DateTime @default(now())
+  
+  @@index([conversationId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+// ==========================================
+// BOOKING TYPES & AVAILABILITY
+// ==========================================
+
+model BookingType {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  name        String
+  description String?   @db.Text
+  duration    Int       // in minutes
+  
+  // Location (for in-person bookings)
+  location    String?
+  
+  // Pricing (optional)
+  price       Float?
+  currency    String?   @default("USD")
+  
+  isActive    Boolean   @default(true)
+  
+  // Relations
+  availability BookingAvailability[]
+  bookings     Booking[]
+  forms        BookingTypeForm[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([workspaceId])
+  @@map("booking_types")
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+model BookingAvailability {
+  id            String      @id @default(uuid())
+  bookingTypeId String
+  bookingType   BookingType @relation(fields: [bookingTypeId], references: [id], onDelete: Cascade)
+  
+  dayOfWeek     DayOfWeek
+  startTime     String      // Format: "HH:mm" (24-hour)
+  endTime       String      // Format: "HH:mm" (24-hour)
+  
+  isActive      Boolean     @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([bookingTypeId])
+  @@map("booking_availability")
+}
+
+// ==========================================
+// BOOKINGS
+// ==========================================
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model Booking {
+  id            String        @id @default(uuid())
+  workspaceId   String
+  workspace     Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  bookingTypeId String
+  bookingType   BookingType   @relation(fields: [bookingTypeId], references: [id])
+  
+  contactId     String
+  contact       Contact       @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  
+  scheduledAt   DateTime
+  duration      Int           // in minutes
+  status        BookingStatus @default(PENDING)
+  
+  // Customer details (snapshot at booking time)
+  customerName  String
+  customerEmail String
+  customerPhone String?
+  
+  notes         String?       @db.Text
+  
+  // Reminder tracking
+  reminderSent  Boolean       @default(false)
+  reminderSentAt DateTime?
+  
+  // Relations
+  formSubmissions FormSubmission[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([workspaceId])
+  @@index([contactId])
+  @@index([scheduledAt])
+  @@index([status])
+  @@map("bookings")
+}
+
+// ==========================================
+// FORMS (POST-BOOKING & CONTACT)
+// ==========================================
+
+enum FormType {
+  CONTACT
+  INTAKE
+  AGREEMENT
+  CUSTOM
+}
+
+model Form {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  name        String
+  description String?   @db.Text
+  type        FormType  @default(CUSTOM)
+  
+  // Form configuration (fields, validation rules)
+  config      Json      // Stores form fields structure
+  
+  // External form integration (optional)
+  externalUrl String?
+  externalProvider String? // "google_forms", "typeform", etc.
+  
+  isActive    Boolean   @default(true)
+  
+  // Relations
+  bookingTypes BookingTypeForm[]
+  submissions  FormSubmission[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([workspaceId])
+  @@map("forms")
+}
+
+// Many-to-many relationship between BookingType and Form
+model BookingTypeForm {
+  id            String      @id @default(uuid())
+  bookingTypeId String
+  bookingType   BookingType @relation(fields: [bookingTypeId], references: [id], onDelete: Cascade)
+  
+  formId        String
+  form          Form        @relation(fields: [formId], references: [id], onDelete: Cascade)
+  
+  sendAfterBooking Boolean   @default(true)
+  reminderAfterDays Int?     // Send reminder if not completed after X days
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([bookingTypeId, formId])
+  @@index([bookingTypeId])
+  @@index([formId])
+  @@map("booking_type_forms")
+}
+
+// ==========================================
+// FORM SUBMISSIONS
+// ==========================================
+
+enum FormSubmissionStatus {
+  PENDING
+  COMPLETED
+  OVERDUE
+}
+
+model FormSubmission {
+  id          String               @id @default(uuid())
+  workspaceId String
+  workspace   Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  formId      String
+  form        Form                 @relation(fields: [formId], references: [id], onDelete: Cascade)
+  
+  contactId   String
+  contact     Contact              @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  
+  bookingId   String?
+  booking     Booking?             @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  
+  status      FormSubmissionStatus @default(PENDING)
+  
+  // Form data (responses)
+  data        Json?
+  
+  // Tracking
+  sentAt      DateTime             @default(now())
+  completedAt DateTime?
+  dueDate     DateTime?
+  
+  reminderSent Boolean             @default(false)
+  reminderSentAt DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([workspaceId])
+  @@index([formId])
+  @@index([contactId])
+  @@index([status])
+  @@map("form_submissions")
+}
+
+// ==========================================
+// INVENTORY MANAGEMENT
+// ==========================================
+
+enum InventoryUnit {
+  PIECE
+  BOX
+  BOTTLE
+  PACK
+  KG
+  LITER
+  OTHER
+}
+
+model InventoryItem {
+  id            String        @id @default(uuid())
+  workspaceId   String
+  workspace     Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  name          String
+  description   String?       @db.Text
+  sku           String?
+  
+  quantity      Int           @default(0)
+  unit          InventoryUnit @default(PIECE)
+  
+  lowStockThreshold Int        @default(10)
+  
+  // Optional vendor information
+  vendorName    String?
+  vendorEmail   String?
+  vendorPhone   String?
+  
+  isActive      Boolean       @default(true)
+  
+  // Relations
+  usageLog      InventoryUsage[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([workspaceId])
+  @@map("inventory_items")
+}
+
+model InventoryUsage {
+  id              String        @id @default(uuid())
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  
+  quantity        Int
+  reason          String?       // "booking", "manual_adjustment", etc.
+  
+  bookingId       String?       // Optional reference to booking
+  notes           String?
+  
+  createdBy       String?       // User ID
+  
+  createdAt DateTime @default(now())
+  
+  @@index([inventoryItemId])
+  @@index([createdAt])
+  @@map("inventory_usage")
+}
+
+// ==========================================
+// ALERTS & NOTIFICATIONS
+// ==========================================
+
+enum AlertType {
+  INVENTORY_LOW
+  FORM_OVERDUE
+  BOOKING_UNCONFIRMED
+  MESSAGE_UNANSWERED
+  SYSTEM
+}
+
+enum AlertPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AlertStatus {
+  ACTIVE
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+model Alert {
+  id          String        @id @default(uuid())
+  workspaceId String
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  type        AlertType
+  priority    AlertPriority @default(MEDIUM)
+  status      AlertStatus   @default(ACTIVE)
+  
+  title       String
+  message     String        @db.Text
+  
+  // Reference to related entity
+  entityType  String?       // "booking", "inventory", "form_submission", etc.
+  entityId    String?
+  
+  // Link to action
+  actionUrl   String?
+  
+  acknowledgedAt DateTime?
+  acknowledgedBy String?    // User ID
+  
+  resolvedAt DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([workspaceId])
+  @@index([status])
+  @@index([priority])
+  @@map("alerts")
+}
+
+// ==========================================
+// AUTOMATION RULES
+// ==========================================
+
+enum AutomationTrigger {
+  NEW_CONTACT
+  BOOKING_CREATED
+  BOOKING_REMINDER
+  FORM_PENDING
+  FORM_OVERDUE
+  INVENTORY_LOW
+}
+
+enum AutomationAction {
+  SEND_EMAIL
+  SEND_SMS
+  CREATE_ALERT
+  UPDATE_STATUS
+}
+
+model AutomationRule {
+  id          String            @id @default(uuid())
+  workspaceId String
+  workspace   Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  name        String
+  description String?           @db.Text
+  
+  trigger     AutomationTrigger
+  action      AutomationAction
+  
+  // Conditions (JSON format for flexibility)
+  conditions  Json?
+  
+  // Action configuration (template, recipient, etc.)
+  config      Json
+  
+  isActive    Boolean           @default(true)
+  
+  // Execution tracking
+  lastExecutedAt DateTime?
+  executionCount Int            @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([workspaceId])
+  @@index([trigger])
+  @@map("automation_rules")
+}
+
+// ==========================================
+// AUDIT LOG (for tracking all actions)
+// ==========================================
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  
+  workspaceId String?
+  userId      String?
+  
+  action      String
+  entityType  String
+  entityId    String?
+  
+  changes     Json?
+  metadata    Json?
+  
+  ipAddress   String?
+  userAgent   String?
+  
+  createdAt DateTime @default(now())
+  
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
