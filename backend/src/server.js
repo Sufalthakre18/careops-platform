@@ -87,7 +87,18 @@ app.get('/health', async (req, res) => {
   }
 });
 
-
+app.use('/api/auth', authRoutes);
+app.use('/api/workspaces', workspaceRoutes);
+app.use('/api/contacts', contactRoutes);
+app.use('/api/conversations', conversationRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/forms', formRoutes);
+app.use('/api/inventory', inventoryRoutes);
+app.use('/api/alerts', alertRoutes);
+app.use('/api/integrations', integrationRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/automation', automationRoutes);
+app.use('/api/staff', staffRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

@@ -165,3 +165,5 @@ router.get(
 );
 
 export default router;
+
+// checked all apis

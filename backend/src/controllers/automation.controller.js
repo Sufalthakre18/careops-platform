@@ -287,7 +287,7 @@ export const getAutomationTemplates = async (req, res) => {
  */
 export const createFromTemplate = async (req, res) => {
   const { templateId } = req.params;
-  const { config: customConfig } = req.body;
+  const { config: customConfig } = req.body || {};
 
   // Get template
   const templates = {

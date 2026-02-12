@@ -237,3 +237,159 @@ export const adjustInventory = async (req, res) => {
     data: updatedItem,
   });
 };
+
+
+/**
+ * Get inventory item by ID
+ */
+export const getInventoryItemById = async (req, res) => {
+  const item = await prisma.inventoryItem.findUnique({
+    where: { id: req.params.id },
+    include: {
+      usageLog: {
+        orderBy: { createdAt: 'desc' },
+      },
+    },
+  });
+
+  if (!item || item.workspaceId !== req.workspaceId) {
+    throw new ApiError(404, 'Inventory item not found');
+  }
+
+  res.json({
+    success: true,
+    data: item,
+  });
+};
+
+/**
+ * Update inventory item details (NOT quantity)
+ */
+export const updateInventoryItem = async (req, res) => {
+  const item = await prisma.inventoryItem.findUnique({
+    where: { id: req.params.id },
+  });
+
+  if (!item || item.workspaceId !== req.workspaceId) {
+    throw new ApiError(404, 'Inventory item not found');
+  }
+
+  const updatedItem = await prisma.inventoryItem.update({
+    where: { id: req.params.id },
+    data: {
+      name: req.body.name ?? item.name,
+      description: req.body.description ?? item.description,
+      sku: req.body.sku ?? item.sku,
+      unit: req.body.unit ?? item.unit,
+      lowStockThreshold:
+        req.body.lowStockThreshold ?? item.lowStockThreshold,
+      vendorName: req.body.vendorName ?? item.vendorName,
+      vendorEmail: req.body.vendorEmail ?? item.vendorEmail,
+      vendorPhone: req.body.vendorPhone ?? item.vendorPhone,
+    },
+  });
+
+  emitToWorkspace(req.workspaceId, 'inventory:updated', updatedItem);
+
+  res.json({
+    success: true,
+    message: 'Inventory item updated successfully',
+    data: updatedItem,
+  });
+};
+
+
+/**
+ * Delete inventory item (Soft delete)
+ */
+export const deleteInventoryItem = async (req, res) => {
+  const item = await prisma.inventoryItem.findUnique({
+    where: { id: req.params.id },
+  });
+
+  if (!item || item.workspaceId !== req.workspaceId) {
+    throw new ApiError(404, 'Inventory item not found');
+  }
+
+  // Soft delete (recommended)
+  await prisma.inventoryItem.update({
+    where: { id: req.params.id },
+    data: { isActive: false },
+  });
+
+  emitToWorkspace(req.workspaceId, 'inventory:deleted', {
+    id: item.id,
+  });
+
+  res.json({
+    success: true,
+    message: 'Inventory item deleted successfully',
+  });
+};
+
+
+/**
+ * Get low stock inventory items
+ */
+export const getLowStockItems = async (req, res) => {
+  const items = await prisma.inventoryItem.findMany({
+    where: {
+      workspaceId: req.workspaceId,
+      isActive: true,
+    },
+    orderBy: {
+      quantity: 'asc',
+    },
+  });
+
+  // Filter in JS (safe & simple)
+  const lowStockItems = items.filter(
+    (item) => item.quantity <= item.lowStockThreshold
+  );
+
+  res.json({
+    success: true,
+    data: lowStockItems,
+  });
+};
+
+
+/**
+ * Get usage history for inventory item
+ */
+export const getUsageHistory = async (req, res) => {
+  const { page = 1, limit = 20 } = req.query;
+
+  const item = await prisma.inventoryItem.findUnique({
+    where: { id: req.params.id },
+  });
+
+  if (!item || item.workspaceId !== req.workspaceId) {
+    throw new ApiError(404, 'Inventory item not found');
+  }
+
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const take = parseInt(limit);
+
+  const [usage, total] = await Promise.all([
+    prisma.inventoryUsage.findMany({
+      where: {
+        inventoryItemId: item.id,
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take,
+    }),
+    prisma.inventoryUsage.count({
+      where: {
+        inventoryItemId: item.id,
+      },
+    }),
+  ]);
+
+  res.json({
+    success: true,
+    data: usage,
+    meta: paginationMeta(total, parseInt(page), parseInt(limit)),
+  });
+};

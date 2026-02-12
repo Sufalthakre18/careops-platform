@@ -158,3 +158,6 @@ router.post(
 );
 
 export default router;
+
+
+// Get all integrations,Get intergration by id, setup email, updated email done. Now  test rest of api after frontend

@@ -171,3 +171,94 @@ export const getDashboardOverview = async (req, res) => {
     },
   });
 };
+
+
+/**
+ * Get today's bookings
+ */
+export const getTodayBookings = async (req, res) => {
+  const { workspaceId } = req;
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const bookings = await prisma.booking.findMany({
+    where: {
+      workspaceId,
+      scheduledAt: { gte: today, lt: tomorrow },
+    },
+    include: {
+      bookingType: true,
+      contact: true,
+    },
+    orderBy: { scheduledAt: 'asc' },
+  });
+
+  res.json({ success: true, data: bookings });
+};
+
+/**
+ * Get upcoming bookings (next 7 days)
+ */
+export const getUpcomingBookings = async (req, res) => {
+  const { workspaceId } = req;
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const next7Days = new Date(today);
+  next7Days.setDate(next7Days.getDate() + 7);
+
+  const bookings = await prisma.booking.findMany({
+    where: {
+      workspaceId,
+      scheduledAt: { gte: today, lt: next7Days },
+      status: { in: ['PENDING', 'CONFIRMED'] },
+    },
+    include: {
+      bookingType: true,
+      contact: true,
+    },
+    orderBy: { scheduledAt: 'asc' },
+  });
+
+  res.json({ success: true, data: bookings });
+};
+
+/**
+ * Get recent activity feed
+ */
+export const getRecentActivity = async (req, res) => {
+  const { workspaceId } = req;
+
+  const [recentBookings, recentContacts, recentMessages] = await Promise.all([
+    prisma.booking.findMany({
+      where: { workspaceId },
+      include: { bookingType: true, contact: true },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    }),
+    
+    prisma.contact.findMany({
+      where: { workspaceId },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    }),
+    
+    prisma.message.findMany({
+      where: { conversation: { workspaceId } },
+      include: { conversation: { include: { contact: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    }),
+  ]);
+
+  const activities = [
+    ...recentBookings.map(b => ({ type: 'booking', action: 'created', timestamp: b.createdAt, data: b })),
+    ...recentContacts.map(c => ({ type: 'contact', action: 'created', timestamp: c.createdAt, data: c })),
+    ...recentMessages.map(m => ({ type: 'message', action: m.direction === 'INBOUND' ? 'received' : 'sent', timestamp: m.createdAt, data: m })),
+  ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 15);
+
+  res.json({ success: true, data: activities });
+};

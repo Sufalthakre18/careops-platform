@@ -146,3 +146,5 @@ router.post(
 );
 
 export default router;
+
+// checked all apis

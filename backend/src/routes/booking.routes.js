@@ -136,7 +136,7 @@ router.delete(
 );
 
 // ==========================================
-// BOOKINGS
+// BOOKINGS  Not done:- after make workspace activate
 // ==========================================
 
 /**
@@ -220,3 +220,5 @@ router.delete(
 );
 
 export default router;
+
+// tested all apis successfully

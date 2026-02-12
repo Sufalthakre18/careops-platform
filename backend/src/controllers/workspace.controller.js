@@ -43,24 +43,40 @@ export const getCurrentWorkspace = async (req, res) => {
  * Update workspace information
  */
 export const updateWorkspace = async (req, res) => {
-    const { businessName, contactEmail } = req.body;
+  const {
+    businessName,
+    contactEmail,
+    address,
+    city,
+    state,
+    zipCode,
+    country,
+    contactPhone,
+    timezone,
+  } = req.body;
 
-    const workspace = await prisma.workspace.update({
-        where: { id: req.workspaceId },
-        data: {
-            businessName,
-            contactEmail,
-        },
-    });
+  const workspace = await prisma.workspace.update({
+    where: { id: req.workspaceId },
+    data: {
+      businessName,
+      contactEmail,
+      address,
+      city,
+      state,
+      zipCode,
+      country,
+      contactPhone,
+      timezone,
+    },
+  });
 
+  console.info(`Workspace updated: ${workspace.id}`);
 
-    console.info(`Workspace updated: ${workspace.id}`);
-
-    res.json({
-        success: true,
-        message: 'Workspace updated successfully',
-        data: workspace,
-    });
+  res.json({
+    success: true,
+    message: 'Workspace updated successfully',
+    data: workspace,
+  });
 };
 
 /**

@@ -307,3 +307,81 @@ export const submitForm = async (req, res) => {
     data: updatedSubmission,
   });
 };
+
+
+/**
+ * Create & submit form directly (public endpoint)
+ */
+export const createAndSubmitForm = async (req, res) => {
+  const { formId } = req.params;
+  const { data } = req.body;
+
+  if (!data) {
+    throw new ApiError(400, 'Form data is required');
+  }
+
+  const form = await prisma.form.findUnique({
+    where: { id: formId },
+  });
+
+  if (!form || !form.isActive) {
+    throw new ApiError(404, 'Form not found');
+  }
+
+  const email = data.Email || data.email;
+
+  if (!email) {
+    throw new ApiError(400, 'Email is required to submit form');
+  }
+
+  // 1️⃣ Find or create contact
+  let contact = await prisma.contact.findFirst({
+    where: {
+      workspaceId: form.workspaceId,
+      email,
+    },
+  });
+
+  if (!contact) {
+    contact = await prisma.contact.create({
+      data: {
+        workspaceId: form.workspaceId,
+        firstName: data["First Name"] || "",
+        lastName: data["Last Name"] || "",
+        email,
+        source: "FORM",
+        status: "NEW",
+      },
+    });
+  }
+
+  // 2️⃣ Create submission
+  const submission = await prisma.formSubmission.create({
+    data: {
+      form: {
+        connect: { id: formId },
+      },
+      workspace: {
+        connect: { id: form.workspaceId },
+      },
+      contact: {
+        connect: { id: contact.id },
+      },
+      data,
+      status: 'COMPLETED',
+      completedAt: new Date(),
+    },
+    include: {
+      form: true,
+      contact: true,
+    },
+  });
+
+  emitToWorkspace(form.workspaceId, 'form:completed', submission);
+
+  res.status(201).json({
+    success: true,
+    message: 'Form submitted successfully. Thank you!',
+    data: submission,
+  });
+};

@@ -132,6 +132,20 @@ router.get(
 );
 
 /**
+ * POST /api/forms/:formId/submissions
+ * Create & submit form (public)
+ */
+router.post(
+  '/:formId/submissions',
+  [
+    param('formId').isUUID(),
+    body('data').isObject().withMessage('Form data is required'),
+    validate,
+  ],
+  asyncHandler(formController.createAndSubmitForm)
+);
+
+/**
  * POST /api/forms/submissions/:id
  * Submit form data (public endpoint)
  * Public
@@ -146,4 +160,10 @@ router.post(
   asyncHandler(formController.submitForm)
 );
 
+
+
+
 export default router;
+
+
+// api tested

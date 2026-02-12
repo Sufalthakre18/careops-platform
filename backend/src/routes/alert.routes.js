@@ -37,6 +37,39 @@ router.get(
   asyncHandler(alertController.getAlertsSummary)
 );
 
+
+/**
+ * PUT /api/alerts/bulk/acknowledge
+ * Acknowledge multiple alerts
+ * Private
+ */
+router.put(
+  '/bulk/acknowledge',
+  authenticate,
+  [
+    body('alertIds').isArray({ min: 1 }).withMessage('Alert IDs array is required'),
+    body('alertIds.*').isUUID(),
+    validate,
+  ],
+  asyncHandler(alertController.bulkAcknowledge)
+);
+
+/**
+ * PUT /api/alerts/bulk/resolve
+ * Resolve multiple alerts
+ * Private
+ */
+router.put(
+  '/bulk/resolve',
+  authenticate,
+  [
+    body('alertIds').isArray({ min: 1 }).withMessage('Alert IDs array is required'),
+    body('alertIds.*').isUUID(),
+    validate,
+  ],
+  asyncHandler(alertController.bulkResolve)
+);
+
 /**
  * GET /api/alerts/:id
  * Get alert by ID
@@ -106,36 +139,5 @@ router.delete(
   asyncHandler(alertController.deleteAlert)
 );
 
-/**
- * PUT /api/alerts/bulk/acknowledge
- * Acknowledge multiple alerts
- * Private
- */
-router.put(
-  '/bulk/acknowledge',
-  authenticate,
-  [
-    body('alertIds').isArray({ min: 1 }).withMessage('Alert IDs array is required'),
-    body('alertIds.*').isUUID(),
-    validate,
-  ],
-  asyncHandler(alertController.bulkAcknowledge)
-);
-
-/**
- * PUT /api/alerts/bulk/resolve
- * Resolve multiple alerts
- * Private
- */
-router.put(
-  '/bulk/resolve',
-  authenticate,
-  [
-    body('alertIds').isArray({ min: 1 }).withMessage('Alert IDs array is required'),
-    body('alertIds.*').isUUID(),
-    validate,
-  ],
-  asyncHandler(alertController.bulkResolve)
-);
 
 export default router;

@@ -34,3 +34,7 @@ router.get('/upcoming-bookings', authenticate, asyncHandler(dashboardController.
 router.get('/recent-activity', authenticate, asyncHandler(dashboardController.getRecentActivity));
 
 export default router;
+
+
+
+// checked all apis
