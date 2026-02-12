@@ -8,6 +8,19 @@ import { Server } from 'socket.io';
 import { prisma, connectDb } from './config/prisma.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 
+// Import routes
+import authRoutes from './routes/auth.routes.js';
+import workspaceRoutes from './routes/workspace.routes.js';
+import contactRoutes from './routes/contact.routes.js';
+import conversationRoutes from './routes/conversation.routes.js';
+import bookingRoutes from './routes/booking.routes.js';
+import formRoutes from './routes/form.routes.js';
+import inventoryRoutes from './routes/inventory.routes.js';
+import alertRoutes from './routes/alert.routes.js';
+import integrationRoutes from './routes/integration.routes.js';
+import dashboardRoutes from './routes/dashboard.routes.js';
+import automationRoutes from './routes/automation.routes.js';
+import staffRoutes from './routes/staff.routes.js'
 
 const app = express();
 const httpServer = createServer(app);
