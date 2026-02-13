@@ -52,13 +52,15 @@ api.interceptors.response.use(
 export const authAPI = {
   login: (email: string, password: string) =>
     api.post('/auth/login', { email, password }),
-  
+
   register: (data: any) =>
     api.post('/auth/register', data),
-  
+
   getCurrentUser: () =>
     api.get('/auth/me'),
-  
+
+  getMe: () => api.get('/auth/me'),
+  updateProfile: (data: any) => api.put('/auth/profile', data),
   logout: () =>
     api.post('/auth/logout'),
 };
@@ -67,16 +69,16 @@ export const authAPI = {
 export const workspaceAPI = {
   getCurrent: () =>
     api.get('/workspaces/current'),
-  
+
   update: (data: any) =>
     api.put('/workspaces/current', data),
-  
+
   getOnboardingStatus: () =>
     api.get('/workspaces/onboarding-status'),
-  
+
   activate: () =>
     api.post('/workspaces/activate'),
-  
+
   getStats: () =>
     api.get('/workspaces/stats'),
 };
@@ -85,7 +87,7 @@ export const workspaceAPI = {
 export const dashboardAPI = {
   getOverview: () =>
     api.get('/dashboard/overview'),
-  
+
   getAlerts: () =>
     api.get('/dashboard/alerts'),
 };
@@ -93,38 +95,38 @@ export const dashboardAPI = {
 // Booking Type APIs
 export const bookingTypeAPI = {
   getAll: () =>
-    api.get('/booking-types'),
-  
+    api.get('/bookings/types'),
+
   getById: (id: string) =>
-    api.get(`/booking-types/${id}`),
-  
+    api.get(`/bookings/types/${id}`),
+
   create: (data: any) =>
-    api.post('/booking-types', data),
-  
+    api.post('/bookings/types', data),
+
   update: (id: string, data: any) =>
-    api.put(`/booking-types/${id}`, data),
-  
+    api.put(`/bookings/types/${id}`, data),
+
   delete: (id: string) =>
-    api.delete(`/booking-types/${id}`),
+    api.delete(`/bookings/types/${id}`),
 };
 
 // Booking APIs
 export const bookingAPI = {
   getAll: (params?: any) =>
     api.get('/bookings', { params }),
-  
+
   getById: (id: string) =>
     api.get(`/bookings/${id}`),
-  
+
   create: (data: any) =>
     api.post('/bookings', data),
-  
+
   update: (id: string, data: any) =>
     api.put(`/bookings/${id}`, data),
-  
+
   updateStatus: (id: string, status: string) =>
-    api.patch(`/bookings/${id}/status`, { status }),
-  
+    api.put(`/bookings/${id}/status`, { status }),
+
   delete: (id: string) =>
     api.delete(`/bookings/${id}`),
 };
@@ -133,16 +135,16 @@ export const bookingAPI = {
 export const contactAPI = {
   getAll: (params?: any) =>
     api.get('/contacts', { params }),
-  
+
   getById: (id: string) =>
     api.get(`/contacts/${id}`),
-  
+
   create: (data: any) =>
     api.post('/contacts', data),
-  
+
   update: (id: string, data: any) =>
     api.put(`/contacts/${id}`, data),
-  
+
   delete: (id: string) =>
     api.delete(`/contacts/${id}`),
 };
@@ -151,16 +153,16 @@ export const contactAPI = {
 export const conversationAPI = {
   getAll: () =>
     api.get('/conversations'),
-  
+
   getById: (id: string) =>
     api.get(`/conversations/${id}`),
-  
+
   getMessages: (id: string) =>
     api.get(`/conversations/${id}/messages`),
-  
+
   sendMessage: (id: string, data: any) =>
     api.post(`/conversations/${id}/messages`, data),
-  
+
   markAsRead: (id: string) =>
     api.patch(`/conversations/${id}/read`),
 };
@@ -169,19 +171,19 @@ export const conversationAPI = {
 export const formAPI = {
   getAll: () =>
     api.get('/forms'),
-  
+
   getById: (id: string) =>
     api.get(`/forms/${id}`),
-  
+
   create: (data: any) =>
     api.post('/forms', data),
-  
+
   update: (id: string, data: any) =>
     api.put(`/forms/${id}`, data),
-  
+
   delete: (id: string) =>
     api.delete(`/forms/${id}`),
-  
+
   getSubmissions: (id: string) =>
     api.get(`/forms/${id}/submissions`),
 };
@@ -190,19 +192,19 @@ export const formAPI = {
 export const inventoryAPI = {
   getAll: () =>
     api.get('/inventory'),
-  
+
   getById: (id: string) =>
     api.get(`/inventory/${id}`),
-  
+
   create: (data: any) =>
     api.post('/inventory', data),
-  
+
   update: (id: string, data: any) =>
     api.put(`/inventory/${id}`, data),
-  
+
   delete: (id: string) =>
     api.delete(`/inventory/${id}`),
-  
+
   adjustStock: (id: string, data: any) =>
     api.post(`/inventory/${id}/adjust`, data),
 };
@@ -211,16 +213,23 @@ export const inventoryAPI = {
 export const integrationAPI = {
   getAll: () =>
     api.get('/integrations'),
-  
-  create: (data: any) =>
-    api.post('/integrations', data),
-  
-  update: (id: string, data: any) =>
-    api.put(`/integrations/${id}`, data),
-  
+
+  createEmail: (data: any) =>
+    api.post('/integrations/email', data),
+
+  updateEmail: (id: string, data: any) =>
+    api.put(`/integrations/email`, data),
+
+  deleteEmail: (id: string) =>
+    api.delete(`/integrations/email`),
+  createSms: (data: any) =>
+    api.post('/integrations/sms', data),
+  createWebhook: (data: any) =>
+    api.post('/integrations/webhook', data),
+
   delete: (id: string) =>
     api.delete(`/integrations/${id}`),
-  
+
   testConnection: (id: string) =>
     api.post(`/integrations/${id}/test`),
 };
@@ -229,25 +238,25 @@ export const integrationAPI = {
 export const staffAPI = {
   getAll: () =>
     api.get('/staff'),
-  
+
   getById: (id: string) =>
     api.get(`/staff/${id}`),
-  
+
   invite: (data: any) =>
     api.post('/staff/invite', data),
-  
+
   updatePermissions: (id: string, permissions: any) =>
     api.put(`/staff/${id}/permissions`, { permissions }),
-  
+
   activate: (id: string) =>
     api.post(`/staff/${id}/activate`),
-  
+
   deactivate: (id: string) =>
     api.post(`/staff/${id}/deactivate`),
-  
+
   remove: (id: string) =>
     api.delete(`/staff/${id}`),
-  
+
   resetPassword: (id: string) =>
     api.post(`/staff/${id}/reset-password`),
 };
@@ -256,10 +265,10 @@ export const staffAPI = {
 export const alertAPI = {
   getAll: (params?: any) =>
     api.get('/alerts', { params }),
-  
+
   markAsResolved: (id: string) =>
     api.patch(`/alerts/${id}/resolve`),
-  
+
   markAsDismissed: (id: string) =>
     api.patch(`/alerts/${id}/dismiss`),
 };

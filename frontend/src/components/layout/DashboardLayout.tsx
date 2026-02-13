@@ -33,7 +33,7 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <Sidebar />
-      <main className="ml-64 mt-16 p-8">
+      <main className="ml-64 mt-16 p-8 min-h-[calc(100vh-4rem)]">
         {children}
       </main>
     </div>

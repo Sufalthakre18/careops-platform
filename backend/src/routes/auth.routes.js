@@ -50,7 +50,7 @@ router.get('/me', authenticate, asyncHandler(authController.getProfile));
 
 /**
  * PUT /api/auth/profile
- * pdate user profile
+ * update user profile
  * Private
  */
 router.put(
