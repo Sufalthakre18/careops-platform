@@ -1,6 +1,23 @@
+'use client';
 
-export default function Home() {
-  return (
-    <h1 className="text-5xl p-5 m-12 bg-amber-800 rounded-3xl ">hello world</h1>
-  );
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import Loading from '@/components/ui/Loading';
+
+export default function HomePage() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading) {
+      if (user) {
+        router.push('/dashboard');
+      } else {
+        router.push('/login');
+      }
+    }
+  }, [user, loading, router]);
+
+  return <Loading fullScreen />;
 }
