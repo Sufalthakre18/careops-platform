@@ -5,7 +5,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Loading from '@/components/ui/Loading';
-import { dashboardAPI, workspaceAPI } from '@/lib/api';
+import { dashboardAPI,alertAPI, workspaceAPI } from '@/lib/api';
 import { formatDate, getStatusColor, handleApiError } from '@/lib/utils';
 import {
   Calendar,
@@ -34,7 +34,7 @@ export default function DashboardPage() {
       const [statsRes, overviewRes, alertsRes] = await Promise.all([
         workspaceAPI.getStats(),
         dashboardAPI.getOverview(),
-        dashboardAPI.getAlerts(),
+        alertAPI.getAll(),
       ]);
 
       setStats(statsRes.data.data);

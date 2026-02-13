@@ -59,12 +59,28 @@ export const cn = (...classes: (string | undefined | null | false)[]) => {
 };
 
 // Handle API errors
-export const handleApiError = (error: any) => {
-  if (error.response?.data?.message) {
-    return error.response.data.message;
+// Handle API errors (Improved)
+export const handleApiError = (error: any): string => {
+  if (!error.response) {
+    return 'Network error. Please check your internet connection.';
   }
-  return 'An unexpected error occurred. Please try again.';
+
+  const { data } = error.response;
+
+  // Express-validator style errors
+  if (data?.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+    const firstError = data.errors[0];
+    return firstError.msg || firstError.message || 'Validation error';
+  }
+
+  // Standard backend message
+  if (data?.message) {
+    return data.message;
+  }
+
+  return 'Something went wrong. Please try again.';
 };
+
 
 // Validate email
 export const isValidEmail = (email: string) => {

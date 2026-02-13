@@ -25,18 +25,28 @@ api.interceptors.request.use(
 );
 
 // Response interceptor to handle errors
+// Response interceptor to handle errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Clear token and redirect to login
+    const url = error.config?.url || '';
+
+    // Do NOT auto-redirect for login/register errors
+    const isAuthRoute =
+      url.includes('/auth/login') ||
+      url.includes('/auth/register');
+
+    if (error.response?.status === 401 && !isAuthRoute) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
+
     return Promise.reject(error);
   }
 );
+
+
 
 // Auth APIs
 export const authAPI = {
@@ -56,19 +66,19 @@ export const authAPI = {
 // Workspace APIs
 export const workspaceAPI = {
   getCurrent: () =>
-    api.get('/workspace/current'),
+    api.get('/workspaces/current'),
   
   update: (data: any) =>
-    api.put('/workspace', data),
+    api.put('/workspaces/current', data),
   
   getOnboardingStatus: () =>
-    api.get('/workspace/onboarding'),
+    api.get('/workspaces/onboarding-status'),
   
   activate: () =>
-    api.post('/workspace/activate'),
+    api.post('/workspaces/activate'),
   
   getStats: () =>
-    api.get('/workspace/stats'),
+    api.get('/workspaces/stats'),
 };
 
 // Dashboard APIs
