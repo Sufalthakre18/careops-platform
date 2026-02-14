@@ -10,7 +10,7 @@ import Loading from '@/components/ui/Loading';
 import Alert from '@/components/ui/Alert';
 import { bookingAPI, bookingTypeAPI, workspaceAPI } from '@/lib/api';
 import { formatDate, handleApiError } from '@/lib/utils';
-import { Calendar, Plus, Search } from 'lucide-react';
+import { Calendar, Plus, Search, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -27,7 +27,7 @@ export default function BookingsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
 
-  const [alert, setAlert] = useState<any>(null);
+  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const [formData, setFormData] = useState({
     bookingTypeId: '',
@@ -38,10 +38,7 @@ export default function BookingsPage() {
     notes: '',
   });
 
-  // ==============================
-  // LOAD DATA
-  // ==============================
-
+  // Load initial data
   useEffect(() => {
     loadData();
   }, []);
@@ -54,8 +51,8 @@ export default function BookingsPage() {
         workspaceAPI.getCurrent(),
       ]);
 
-      setBookings(bookingsRes.data.data);
-      setBookingTypes(typesRes.data.data);
+      setBookings(bookingsRes.data.data || []);
+      setBookingTypes(typesRes.data.data || []);
       setWorkspace(workspaceRes.data.data);
     } catch (error) {
       setAlert({ type: 'error', message: 'Failed to load bookings' });
@@ -64,19 +61,14 @@ export default function BookingsPage() {
     }
   };
 
-  // ==============================
-  // CREATE BOOKING
-  // ==============================
-
+  // Create new booking
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-
     try {
       await bookingAPI.create({
-        workspaceId: workspace.id,
+        workspaceId: workspace?.id,
         ...formData,
       });
-
       setAlert({ type: 'success', message: 'Booking created successfully!' });
       closeModal();
       loadData();
@@ -85,10 +77,7 @@ export default function BookingsPage() {
     }
   };
 
-  // ==============================
-  // STATUS UPDATE
-  // ==============================
-
+  // Update booking status
   const handleStatusChange = async (id: string, status: string) => {
     try {
       await bookingAPI.updateStatus(id, status);
@@ -99,16 +88,12 @@ export default function BookingsPage() {
     }
   };
 
-  // ==============================
-  // DELETE BOOKING
-  // ==============================
-
+  // Cancel booking
   const handleDelete = async (id: string) => {
-    if (!confirm('Cancel this booking?')) return;
-
+    if (!confirm('Are you sure you want to cancel this booking?')) return;
     try {
       await bookingAPI.delete(id);
-      setAlert({ type: 'success', message: 'Booking cancelled!' });
+      setAlert({ type: 'success', message: 'Booking cancelled successfully!' });
       loadData();
     } catch (error) {
       setAlert({ type: 'error', message: handleApiError(error) });
@@ -127,42 +112,25 @@ export default function BookingsPage() {
     });
   };
 
-  // ==============================
-  // OWNER REDIRECT LOGIC
-  // ==============================
-
   const handleNewBookingClick = () => {
     if (user?.role === 'OWNER' && bookingTypes.length === 0) {
       setAlert({
         type: 'error',
         message: 'Please create at least one booking type first.',
       });
-
-      setTimeout(() => {
-        router.push('/bookings/admin');
-      }, 1000);
-
+      setTimeout(() => router.push('/bookings/admin'), 1800);
       return;
     }
-
     setShowModal(true);
   };
 
-  // ==============================
-  // FILTER
-  // ==============================
-
+  // Filter bookings
   const filteredBookings = bookings.filter((booking) => {
     const matchesSearch =
-      booking.customerName
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      booking.customerEmail
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase());
+      (booking.customerName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (booking.customerEmail?.toLowerCase() || '').includes(searchTerm.toLowerCase());
 
-    const matchesStatus =
-      filterStatus === 'ALL' || booking.status === filterStatus;
+    const matchesStatus = filterStatus === 'ALL' || booking.status === filterStatus;
 
     return matchesSearch && matchesStatus;
   });
@@ -177,35 +145,37 @@ export default function BookingsPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-
-        {/* HEADER */}
-        <div className="flex justify-between items-center">
+      <div className="space-y-6 md:space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Bookings</h1>
-            <p className="text-gray-500">Manage all appointments</p>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">
+              Bookings
+            </h1>
+            <p className="text-gray-600 mt-1">Manage and view all appointments</p>
           </div>
 
-          <div className="flex gap-3">
-            {/* OWNER ONLY BUTTON */}
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
             {user?.role === 'OWNER' && (
               <Button
                 variant="secondary"
                 onClick={() => router.push('/bookings/admin')}
+                className="w-full sm:w-auto"
               >
                 Manage Booking Types
               </Button>
             )}
-
-            <Button onClick={handleNewBookingClick}>
+            <Button
+              onClick={handleNewBookingClick}
+              className="w-full sm:w-auto flex items-center justify-center"
+            >
               <Plus className="w-4 h-4 mr-2" />
               New Booking
             </Button>
           </div>
         </div>
 
-
-        {/* ALERT */}
+        {/* Alert */}
         {alert && (
           <Alert
             type={alert.type}
@@ -214,26 +184,36 @@ export default function BookingsPage() {
           />
         )}
 
-        {/* FILTER */}
-        <Card>
-          <div className="flex gap-4">
+        {/* Filters */}
+        <Card className="border-none shadow-sm bg-white rounded-xl">
+          <div className="p-4 md:p-5 flex flex-col md:flex-row gap-4">
+            {/* Search */}
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search by name or email..."
-                className="w-full pl-9 pr-4 py-2 border rounded-lg"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
             </div>
 
+            {/* Status Filter */}
             <select
-              className="border rounded-lg px-3 py-2"
+              className="w-full md:w-48 px-4 py-2.5 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-white"
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
             >
-              <option value="ALL">All</option>
+              <option value="ALL">All Statuses</option>
               <option value="PENDING">Pending</option>
               <option value="CONFIRMED">Confirmed</option>
               <option value="COMPLETED">Completed</option>
@@ -243,85 +223,97 @@ export default function BookingsPage() {
           </div>
         </Card>
 
-        {/* BOOKINGS LIST */}
-        <Card>
-          <div className="space-y-4">
-            {filteredBookings.length === 0 && (
-              <div className="text-center py-10 text-gray-500">
-                No bookings found
-              </div>
-            )}
+        {/* Bookings List */}
+        <Card className="border-none shadow-sm bg-white rounded-xl overflow-hidden">
+          {filteredBookings.length === 0 ? (
+            <div className="text-center py-16 md:py-24">
+              <Calendar className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+              <h3 className="text-xl font-medium text-gray-600 mb-2">No bookings found</h3>
+              <p className="text-gray-500">
+                {searchTerm || filterStatus !== 'ALL'
+                  ? 'Try adjusting your filters'
+                  : 'Create your first booking to get started'}
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {filteredBookings.map((booking) => (
+                <div
+                  key={booking.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 md:p-5 hover:bg-gray-50 transition-colors duration-150"
+                >
+                  {/* Left - Info */}
+                  <div className="flex-1 mb-4 sm:mb-0">
+                    <h4 className="font-semibold text-gray-900 text-lg">
+                      {booking.customerName}
+                    </h4>
+                    <p className="text-sm text-gray-600 mt-1">{booking.customerEmail}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formatDate(booking.scheduledAt, 'MMM dd, yyyy • hh:mm a')}
+                    </p>
+                  </div>
 
-            {filteredBookings.map((booking) => (
-              <div
-                key={booking.id}
-                className="flex justify-between items-center bg-gray-50 p-4 rounded-lg"
-              >
-                <div>
-                  <h4 className="font-semibold">{booking.customerName}</h4>
-                  <p className="text-sm text-gray-500">
-                    {booking.customerEmail}
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    {formatDate(booking.scheduledAt)}
-                  </p>
+                  {/* Right - Actions */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <select
+                      value={booking.status}
+                      onChange={(e) => handleStatusChange(booking.id, e.target.value)}
+                      className="w-full sm:w-36 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200"
+                    >
+                      <option value="PENDING">Pending</option>
+                      <option value="CONFIRMED">Confirmed</option>
+                      <option value="COMPLETED">Completed</option>
+                      <option value="CANCELLED">Cancelled</option>
+                      <option value="NO_SHOW">No Show</option>
+                    </select>
+
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={() => handleDelete(booking.id)}
+                      className="w-full sm:w-auto"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
-
-                <div className="flex gap-3 items-center">
-                  <select
-                    value={booking.status}
-                    onChange={(e) =>
-                      handleStatusChange(booking.id, e.target.value)
-                    }
-                    className="border rounded-lg px-2 py-1 text-sm"
-                  >
-                    <option value="PENDING">Pending</option>
-                    <option value="CONFIRMED">Confirmed</option>
-                    <option value="COMPLETED">Completed</option>
-                    <option value="CANCELLED">Cancelled</option>
-                    <option value="NO_SHOW">No Show</option>
-                  </select>
-
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    onClick={() => handleDelete(booking.id)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </Card>
 
-        {/* CREATE MODAL */}
+        {/* Create Booking Modal */}
         <Modal
           isOpen={showModal}
           onClose={closeModal}
-          title="Create Booking"
+          title="Create New Booking"
+          size="lg"
         >
-          <form onSubmit={handleCreate} className="space-y-4">
-
-            <select
-              className="input"
-              value={formData.bookingTypeId}
-              onChange={(e) =>
-                setFormData({ ...formData, bookingTypeId: e.target.value })
-              }
-              required
-            >
-              <option value="">Select Booking Type</option>
-              {bookingTypes.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.name} ({type.duration} min)
-                </option>
-              ))}
-            </select>
+          <form onSubmit={handleCreate} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Booking Type <span className="text-red-500">*</span>
+              </label>
+              <select
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200"
+                value={formData.bookingTypeId}
+                onChange={(e) =>
+                  setFormData({ ...formData, bookingTypeId: e.target.value })
+                }
+                required
+              >
+                <option value="">Select a service...</option>
+                {bookingTypes.map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.name} ({type.duration} min)
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <Input
               type="datetime-local"
-              label="Scheduled At"
+              label="Date & Time"
               value={formData.scheduledAt}
               onChange={(e) =>
                 setFormData({ ...formData, scheduledAt: e.target.value })
@@ -329,42 +321,47 @@ export default function BookingsPage() {
               required
             />
 
-            <Input
-              label="Customer Name"
-              value={formData.customerName}
-              onChange={(e) =>
-                setFormData({ ...formData, customerName: e.target.value })
-              }
-              required
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <Input
+                label="Customer Name"
+                value={formData.customerName}
+                onChange={(e) =>
+                  setFormData({ ...formData, customerName: e.target.value })
+                }
+                required
+              />
+              <Input
+                label="Customer Email"
+                type="email"
+                value={formData.customerEmail}
+                onChange={(e) =>
+                  setFormData({ ...formData, customerEmail: e.target.value })
+                }
+                required
+              />
+            </div>
 
             <Input
-              label="Customer Email"
-              type="email"
-              value={formData.customerEmail}
-              onChange={(e) =>
-                setFormData({ ...formData, customerEmail: e.target.value })
-              }
-              required
-            />
-
-            <Input
-              label="Phone"
+              label="Phone Number"
               value={formData.customerPhone}
               onChange={(e) =>
                 setFormData({ ...formData, customerPhone: e.target.value })
               }
             />
 
-            <textarea
-              className="input"
-              rows={3}
-              placeholder="Notes"
-              value={formData.notes}
-              onChange={(e) =>
-                setFormData({ ...formData, notes: e.target.value })
-              }
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Notes
+              </label>
+              <textarea
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 min-h-[100px]"
+                placeholder="Any additional information..."
+                value={formData.notes}
+                onChange={(e) =>
+                  setFormData({ ...formData, notes: e.target.value })
+                }
+              />
+            </div>
 
             <div className="flex justify-end gap-3 pt-4">
               <Button
@@ -374,14 +371,10 @@ export default function BookingsPage() {
               >
                 Cancel
               </Button>
-
-              <Button type="submit">
-                Create Booking
-              </Button>
+              <Button type="submit">Create Booking</Button>
             </div>
           </form>
         </Modal>
-
       </div>
     </DashboardLayout>
   );

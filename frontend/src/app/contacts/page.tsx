@@ -10,7 +10,7 @@ import Loading from '@/components/ui/Loading';
 import Alert from '@/components/ui/Alert';
 import { contactAPI, workspaceAPI } from '@/lib/api';
 import { formatDate, handleApiError } from '@/lib/utils';
-import { Users, Plus, Search, Mail, Phone } from 'lucide-react';
+import { Users, Plus, Search, Mail, Phone, Edit, Trash2, X } from 'lucide-react';
 
 export default function ContactsPage() {
   const [contacts, setContacts] = useState<any[]>([]);
@@ -19,10 +19,7 @@ export default function ContactsPage() {
   const [selectedContact, setSelectedContact] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [workspaceId, setWorkspaceId] = useState('');
-  const [alert, setAlert] = useState<{
-    type: 'success' | 'error';
-    message: string;
-  } | null>(null);
+  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const [modalError, setModalError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -52,9 +49,10 @@ export default function ContactsPage() {
   const loadContacts = async () => {
     try {
       const response = await contactAPI.getAll();
-      setContacts(response.data.data);
+      setContacts(response.data.data || []);
     } catch (error) {
       console.error('Error loading contacts:', error);
+      setAlert({ type: 'error', message: 'Failed to load contacts' });
     } finally {
       setLoading(false);
     }
@@ -64,7 +62,7 @@ export default function ContactsPage() {
     e.preventDefault();
 
     if (!workspaceId) {
-      setModalError('Workspace not loaded. Please refresh page.');
+      setModalError('Workspace not loaded. Please refresh.');
       return;
     }
 
@@ -73,26 +71,24 @@ export default function ContactsPage() {
 
     try {
       if (selectedContact) {
-        // ✅ UPDATE → send only allowed fields
+        // Update
         await contactAPI.update(selectedContact.id, {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          phone: formData.phone,
+          firstName: formData.firstName.trim(),
+          lastName: formData.lastName.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone.trim() || undefined,
         });
-
         setAlert({ type: 'success', message: 'Contact updated successfully!' });
       } else {
-        // ✅ CREATE → include workspaceId
+        // Create
         await contactAPI.create({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          phone: formData.phone,
-          message: formData.message, // allowed for create
+          firstName: formData.firstName.trim(),
+          lastName: formData.lastName.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone.trim() || undefined,
+          message: formData.message.trim() || undefined,
           workspaceId,
         });
-
         setAlert({ type: 'success', message: 'Contact created successfully!' });
       }
 
@@ -103,17 +99,15 @@ export default function ContactsPage() {
         error?.response?.data?.message ||
         error?.response?.data?.error ||
         error?.message ||
-        'Something went wrong';
-
+        'Operation failed. Please try again.';
       setModalError(message);
     } finally {
       setSubmitting(false);
     }
   };
 
-
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this contact?')) return;
+    if (!confirm('Are you sure you want to delete this contact? This cannot be undone.')) return;
 
     try {
       await contactAPI.delete(id);
@@ -154,7 +148,7 @@ export default function ContactsPage() {
     setFormData({
       firstName: contact.firstName || '',
       lastName: contact.lastName || '',
-      email: contact.email,
+      email: contact.email || '',
       phone: contact.phone || '',
       message: contact.message || '',
     });
@@ -162,7 +156,7 @@ export default function ContactsPage() {
   };
 
   const filteredContacts = contacts.filter((contact) =>
-    `${contact.firstName || ''} ${contact.lastName || ''} ${contact.email}`
+    `${contact.firstName || ''} ${contact.lastName || ''} ${contact.email || ''}`
       .toLowerCase()
       .includes(searchTerm.toLowerCase())
   );
@@ -177,9 +171,27 @@ export default function ContactsPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 md:space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">
+              Contacts
+            </h1>
+            <p className="text-gray-600 mt-1">Manage your customer relationships</p>
+          </div>
 
-        {/* PAGE ALERT */}
+          <Button
+            onClick={openCreateModal}
+            disabled={!workspaceId}
+            className="w-full sm:w-auto flex items-center justify-center"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            New Contact
+          </Button>
+        </div>
+
+        {/* Page-level Alert */}
         {alert && (
           <Alert
             type={alert.type}
@@ -188,117 +200,134 @@ export default function ContactsPage() {
           />
         )}
 
-        {/* HEADER */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Contacts</h1>
-            <p className="text-gray-600 mt-1">Manage your customer contacts</p>
+        {/* Search & Filter */}
+        <Card className="border-none shadow-sm bg-white rounded-xl">
+          <div className="p-4 md:p-5">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by name or email..."
+                className="w-full pl-12 pr-10 py-3 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
+            </div>
           </div>
+        </Card>
 
-          <Button disabled={!workspaceId} onClick={openCreateModal}>
-            <Plus className="w-5 h-5 mr-2" />
-            New Contact
-          </Button>
-        </div>
-
-        {/* LIST */}
-        <Card>
-          <div className="mb-4 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search contacts..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-3">
-            {filteredContacts.length > 0 ? (
-              filteredContacts.map((contact) => (
+        {/* Contacts List */}
+        <Card className="border-none shadow-sm bg-white rounded-xl overflow-hidden">
+          {filteredContacts.length === 0 ? (
+            <div className="text-center py-16 md:py-24">
+              <Users className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+              <h3 className="text-xl font-medium text-gray-600 mb-2">No contacts yet</h3>
+              <p className="text-gray-500">
+                {searchTerm
+                  ? 'No matching contacts found'
+                  : 'Add your first contact to get started'}
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {filteredContacts.map((contact) => (
                 <div
                   key={contact.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 md:p-5 hover:bg-gray-50 transition-colors duration-150 gap-4"
                 >
-                  <div className="flex items-center space-x-4 flex-1">
-                    <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
-                      <span className="text-primary-700 font-medium text-lg">
-                        {(contact.firstName?.[0] || '')}
-                        {(contact.lastName?.[0] || '')}
+                  {/* Contact Info */}
+                  <div className="flex items-start space-x-4 flex-1 min-w-0">
+                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-blue-700 font-medium text-lg">
+                        {(contact.firstName?.[0] || '') + (contact.lastName?.[0] || '') || '?'}
                       </span>
                     </div>
 
-                    <div className="flex-1">
-                      <h4 className="font-medium text-gray-900">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-semibold text-gray-900 truncate">
                         {contact.firstName} {contact.lastName}
                       </h4>
 
-                      <div className="flex items-center space-x-4 mt-1 text-sm text-gray-600">
+                      <div className="mt-1 flex flex-wrap gap-x-5 gap-y-1 text-sm text-gray-600">
                         <div className="flex items-center">
-                          <Mail className="w-4 h-4 mr-1" />
-                          {contact.email}
+                          <Mail className="w-4 h-4 mr-1.5 text-gray-500" />
+                          <span className="truncate max-w-[180px]">{contact.email}</span>
                         </div>
 
                         {contact.phone && (
                           <div className="flex items-center">
-                            <Phone className="w-4 h-4 mr-1" />
+                            <Phone className="w-4 h-4 mr-1.5 text-gray-500" />
                             {contact.phone}
                           </div>
                         )}
                       </div>
 
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500 mt-1.5">
                         Added {formatDate(contact.createdAt, 'MMM dd, yyyy')}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Button size="sm" variant="secondary" onClick={() => openEditModal(contact)}>
+                  {/* Actions */}
+                  <div className="flex items-center gap-3 self-start sm:self-center">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => openEditModal(contact)}
+                      className="flex items-center"
+                    >
+                      <Edit className="w-4 h-4 mr-1.5" />
                       Edit
                     </Button>
 
-                    <Button size="sm" variant="danger" onClick={() => handleDelete(contact.id)}>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={() => handleDelete(contact.id)}
+                      className="flex items-center"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1.5" />
                       Delete
                     </Button>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="text-center py-12 text-gray-500">
-                <Users className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg font-medium">No contacts found</p>
-              </div>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </Card>
 
-        {/* MODAL */}
+        {/* Create / Edit Modal */}
         <Modal
           isOpen={showModal}
           onClose={closeModal}
-          title={selectedContact ? 'Edit Contact' : 'Create New Contact'}
+          title={selectedContact ? 'Edit Contact' : 'Add New Contact'}
+          size="md"
         >
-          <form onSubmit={handleSubmit} className="space-y-4">
-
-            {/* 🔥 MODAL ERROR HERE */}
+          <form onSubmit={handleSubmit} className="space-y-5">
             {modalError && (
               <Alert
                 type="error"
                 message={modalError}
                 onClose={() => setModalError(null)}
-                autoClose={false}
               />
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <Input
                 label="First Name"
                 value={formData.firstName}
                 onChange={(e) =>
                   setFormData({ ...formData, firstName: e.target.value })
                 }
+                placeholder="John"
               />
 
               <Input
@@ -307,38 +336,39 @@ export default function ContactsPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, lastName: e.target.value })
                 }
+                placeholder="Doe"
               />
             </div>
 
             <Input
               type="email"
-              label="Email"
+              label="Email Address"
               value={formData.email}
               onChange={(e) =>
                 setFormData({ ...formData, email: e.target.value })
               }
+              placeholder="john@example.com"
               required
             />
 
             <Input
               type="tel"
-              label="Phone"
+              label="Phone Number"
               value={formData.phone}
               onChange={(e) =>
                 setFormData({ ...formData, phone: e.target.value })
               }
+              placeholder="+91 98765 43210"
             />
 
-            {/* Show Message ONLY when creating contact */}
             {!selectedContact && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Message
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Initial Message (optional)
                 </label>
                 <textarea
-                  className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-500 focus:outline-none"
-                  rows={3}
-                  placeholder="Optional message from contact..."
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 min-h-[100px]"
+                  placeholder="Any message or note from this contact..."
                   value={formData.message}
                   onChange={(e) =>
                     setFormData({ ...formData, message: e.target.value })
@@ -347,24 +377,26 @@ export default function ContactsPage() {
               </div>
             )}
 
-
-            <div className="flex justify-end space-x-3 pt-4">
-              <Button type="button" variant="secondary" onClick={closeModal}>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={closeModal}
+                disabled={submitting}
+              >
                 Cancel
               </Button>
 
-              <Button type="submit" disabled={submitting}>
+              <Button type="submit" disabled={submitting} loading={submitting}>
                 {submitting
-                  ? 'Please wait...'
+                  ? 'Saving...'
                   : selectedContact
-                    ? 'Update'
-                    : 'Create'}
+                  ? 'Update Contact'
+                  : 'Add Contact'}
               </Button>
             </div>
-
           </form>
         </Modal>
-
       </div>
     </DashboardLayout>
   );

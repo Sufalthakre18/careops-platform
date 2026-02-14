@@ -12,7 +12,7 @@ import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import { formAPI, bookingTypeAPI } from '@/lib/api';
 import { handleApiError } from '@/lib/utils';
-import { Link2, Save, ArrowLeft, Eye } from 'lucide-react';
+import { Link2, Save, ArrowLeft, Eye, Plus, Trash2 } from 'lucide-react';
 
 export default function FormBuilderPage() {
   const params = useParams();
@@ -51,16 +51,16 @@ export default function FormBuilderPage() {
         bookingTypeAPI.getAll(),
       ]);
 
-      const formData = formRes.data.data;
-      setForm(formData);
+      const formDataFromApi = formRes.data.data;
+      setForm(formDataFromApi);
       setFormData({
-        name: formData.name,
-        description: formData.description || '',
-        type: formData.type,
-        config: formData.config || { fields: [] },
+        name: formDataFromApi.name || '',
+        description: formDataFromApi.description || '',
+        type: formDataFromApi.type || 'INTAKE',
+        config: formDataFromApi.config || { fields: [] },
       });
 
-      setBookingTypes(typesRes.data.data);
+      setBookingTypes(typesRes.data.data || []);
     } catch (error) {
       setAlert({ type: 'error', message: handleApiError(error) });
     } finally {
@@ -72,7 +72,7 @@ export default function FormBuilderPage() {
     setSaving(true);
     try {
       await formAPI.update(formId, formData);
-      setAlert({ type: 'success', message: 'Form updated successfully!' });
+      setAlert({ type: 'success', message: 'Form saved successfully!' });
       loadData();
     } catch (error) {
       setAlert({ type: 'error', message: handleApiError(error) });
@@ -92,7 +92,7 @@ export default function FormBuilderPage() {
         sendAfterBooking: linkData.sendAfterBooking,
         reminderAfterDays: linkData.reminderAfterDays,
       });
-      setAlert({ type: 'success', message: 'Form linked to booking type!' });
+      setAlert({ type: 'success', message: 'Form successfully linked!' });
       setShowLinkModal(false);
       setLinkData({ bookingTypeId: '', sendAfterBooking: true, reminderAfterDays: 1 });
       loadData();
@@ -105,6 +105,7 @@ export default function FormBuilderPage() {
     setFormData({
       ...formData,
       config: {
+        ...formData.config,
         fields: [...formData.config.fields, { label: '', type: 'text', required: false }],
       },
     });
@@ -113,12 +114,18 @@ export default function FormBuilderPage() {
   const updateField = (index: number, key: string, value: any) => {
     const newFields = [...formData.config.fields];
     newFields[index] = { ...newFields[index], [key]: value };
-    setFormData({ ...formData, config: { fields: newFields } });
+    setFormData({
+      ...formData,
+      config: { ...formData.config, fields: newFields },
+    });
   };
 
   const removeField = (index: number) => {
-    const newFields = formData.config.fields.filter((_, i) => i !== index);
-    setFormData({ ...formData, config: { fields: newFields } });
+    const newFields = formData.config.fields.filter((_: any, i: number) => i !== index);
+    setFormData({
+      ...formData,
+      config: { ...formData.config, fields: newFields },
+    });
   };
 
   if (loading) {
@@ -131,67 +138,95 @@ export default function FormBuilderPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 max-w-4xl mx-auto">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+      <div className="space-y-6 md:space-y-8 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" onClick={() => router.push('/forms')}>
-              <ArrowLeft className="w-4 h-4 mr-1" />
+              <ArrowLeft className="w-5 h-5 mr-2" />
               Back
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{form?.name}</h1>
-              <p className="text-gray-600 mt-1">Configure and manage your form</p>
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">
+                {form?.name || 'Form Builder'}
+              </h1>
+              <p className="text-gray-600 mt-1">Customize your form fields & settings</p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
-            <Button variant="secondary" onClick={() => setShowLinkModal(true)}>
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <Button
+              variant="secondary"
+              onClick={() => setShowLinkModal(true)}
+              className="w-full sm:w-auto flex items-center justify-center"
+            >
               <Link2 className="w-4 h-4 mr-2" />
               Link to Booking
             </Button>
-            <Button variant="secondary" onClick={() => setShowSubmissionsModal(true)}>
+            <Button
+              variant="secondary"
+              onClick={() => setShowSubmissionsModal(true)}
+              className="w-full sm:w-auto flex items-center justify-center"
+            >
               <Eye className="w-4 h-4 mr-2" />
               Submissions ({form?.submissions?.length || 0})
             </Button>
-            <Button variant="primary" onClick={handleSave} loading={saving}>
+            <Button
+              variant="primary"
+              onClick={handleSave}
+              loading={saving}
+              className="w-full sm:w-auto flex items-center justify-center"
+            >
               <Save className="w-4 h-4 mr-2" />
               Save Changes
             </Button>
           </div>
         </div>
 
+        {/* Alerts */}
         {alert && (
-          <Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} />
+          <Alert
+            type={alert.type}
+            message={alert.message}
+            onClose={() => setAlert(null)}
+          />
         )}
 
         {/* Basic Info */}
-        <Card title="Basic Information">
-          <div className="space-y-4">
+        <Card className="border-none shadow-sm rounded-xl">
+          <div className="p-5 md:p-6 space-y-5">
             <Input
-              label="Form Name"
+              label="Form Name *"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="e.g. New Client Intake Form"
+              required
             />
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Form Type</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Form Type
+              </label>
               <select
-                className="input"
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200"
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
               >
                 <option value="CONTACT">Contact Form</option>
                 <option value="INTAKE">Intake Form</option>
-                <option value="AGREEMENT">Agreement</option>
+                <option value="AGREEMENT">Agreement Form</option>
                 <option value="CUSTOM">Custom Form</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Description
+              </label>
               <textarea
-                className="input"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 min-h-[100px]"
                 rows={3}
+                placeholder="Brief description of what this form is for..."
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
@@ -202,88 +237,128 @@ export default function FormBuilderPage() {
         {/* Form Fields */}
         <Card
           title="Form Fields"
-          description="Design your form fields"
+          description="Add, edit, or remove questions your customers will answer"
+          className="border-none shadow-sm rounded-xl"
           action={
-            <Button size="sm" variant="secondary" onClick={addField}>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={addField}
+              className="flex items-center"
+            >
+              <Plus className="w-4 h-4 mr-1.5" />
               Add Field
             </Button>
           }
         >
-          <div className="space-y-3">
-            {formData.config.fields.map((field, index) => (
-              <div key={index} className="p-4 bg-gray-50 rounded-lg space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <Input
-                    label="Field Label"
-                    value={field.label}
-                    onChange={(e) => updateField(index, 'label', e.target.value)}
-                  />
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Field Type</label>
-                    <select
-                      className="input"
-                      value={field.type}
-                      onChange={(e) => updateField(index, 'type', e.target.value)}
+          <div className="p-5 md:p-6 space-y-4">
+            {formData.config.fields.length === 0 ? (
+              <div className="text-center py-12 text-gray-500 border-2 border-dashed border-gray-200 rounded-xl">
+                <p className="text-lg font-medium">No fields yet</p>
+                <p className="text-sm mt-2">Click "Add Field" to start building your form</p>
+              </div>
+            ) : (
+              formData.config.fields.map((field: any, index: number) => (
+                <div
+                  key={index}
+                  className="p-4 md:p-5 bg-gray-50 rounded-xl border border-gray-200 space-y-4 hover:shadow-sm transition-shadow"
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Input
+                      label="Field Label *"
+                      value={field.label}
+                      onChange={(e) => updateField(index, 'label', e.target.value)}
+                      placeholder="e.g. Full Name, Date of Birth"
+                      required
+                    />
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                        Field Type
+                      </label>
+                      <select
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200"
+                        value={field.type}
+                        onChange={(e) => updateField(index, 'type', e.target.value)}
+                      >
+                        <option value="text">Short Text</option>
+                        <option value="textarea">Paragraph Text</option>
+                        <option value="email">Email</option>
+                        <option value="number">Number</option>
+                        <option value="date">Date</option>
+                        <option value="tel">Phone</option>
+                        <option value="checkbox">Checkbox</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                        checked={field.required || false}
+                        onChange={(e) => updateField(index, 'required', e.target.checked)}
+                      />
+                      <span className="text-sm text-gray-700">Required</span>
+                    </label>
+
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={() => removeField(index)}
+                      className="flex items-center"
                     >
-                      <option value="text">Text</option>
-                      <option value="textarea">Textarea</option>
-                      <option value="email">Email</option>
-                      <option value="number">Number</option>
-                      <option value="date">Date</option>
-                      <option value="tel">Phone</option>
-                      <option value="checkbox">Checkbox</option>
-                    </select>
+                      <Trash2 className="w-4 h-4 mr-1.5" />
+                      Remove
+                    </Button>
                   </div>
                 </div>
-
-                <div className="flex items-center justify-between">
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 text-primary-600 rounded"
-                      checked={field.required}
-                      onChange={(e) => updateField(index, 'required', e.target.checked)}
-                    />
-                    <span className="text-sm text-gray-700">Required Field</span>
-                  </label>
-
-                  <Button size="sm" variant="danger" onClick={() => removeField(index)}>
-                    Remove Field
-                  </Button>
-                </div>
-              </div>
-            ))}
-
-            {formData.config.fields.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                <p>No fields added yet. Click "Add Field" to get started.</p>
-              </div>
+              ))
             )}
           </div>
         </Card>
 
         {/* Linked Booking Types */}
-        <Card title="Linked Booking Types" description="Forms connected to booking types">
-          {form?.bookingTypes && form.bookingTypes.length > 0 ? (
-            <div className="space-y-2">
-              {form.bookingTypes.map((link: any) => (
-                <div key={link.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900">{link.bookingType.name}</p>
-                    <p className="text-sm text-gray-600">
-                      {link.sendAfterBooking ? 'Sent after booking' : 'Manual send'}
-                      {link.reminderAfterDays && ` • Reminder after ${link.reminderAfterDays} day(s)`}
-                    </p>
+        <Card title="Linked Booking Types" className="border-none shadow-sm rounded-xl">
+          <div className="p-5 md:p-6">
+            {form?.bookingTypes?.length > 0 ? (
+              <div className="space-y-3">
+                {form.bookingTypes.map((link: any) => (
+                  <div
+                    key={link.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 rounded-lg gap-3"
+                  >
+                    <div>
+                      <p className="font-medium text-gray-900">{link.bookingType.name}</p>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {link.sendAfterBooking
+                          ? 'Sent automatically after booking'
+                          : 'Manual send only'}
+                        {link.reminderAfterDays > 0 &&
+                          ` • Reminder after ${link.reminderAfterDays} day(s)`}
+                      </p>
+                    </div>
+                    <Badge variant="success" className="self-start sm:self-center">
+                      Linked
+                    </Badge>
                   </div>
-                  <Badge variant="success">Linked</Badge>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-6 text-gray-500">
-              <p className="text-sm">No booking types linked yet</p>
-            </div>
-          )}
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p className="text-sm">This form is not linked to any booking type yet</p>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="mt-4"
+                  onClick={() => setShowLinkModal(true)}
+                >
+                  Link a Booking Type
+                </Button>
+              </div>
+            )}
+          </div>
         </Card>
 
         {/* Link Modal */}
@@ -291,8 +366,51 @@ export default function FormBuilderPage() {
           isOpen={showLinkModal}
           onClose={() => setShowLinkModal(false)}
           title="Link Form to Booking Type"
-          footer={
-            <div className="flex space-x-3">
+          size="md"
+        >
+          <div className="space-y-5 p-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Select Booking Type <span className="text-red-500">*</span>
+              </label>
+              <select
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200"
+                value={linkData.bookingTypeId}
+                onChange={(e) => setLinkData({ ...linkData, bookingTypeId: e.target.value })}
+              >
+                <option value="">Choose a booking type...</option>
+                {bookingTypes.map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.name} ({type.duration} min)
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                checked={linkData.sendAfterBooking}
+                onChange={(e) => setLinkData({ ...linkData, sendAfterBooking: e.target.checked })}
+              />
+              <span className="text-sm text-gray-700">
+                Automatically send this form after booking is confirmed
+              </span>
+            </label>
+
+            <Input
+              type="number"
+              label="Send Reminder After (days)"
+              value={linkData.reminderAfterDays}
+              onChange={(e) =>
+                setLinkData({ ...linkData, reminderAfterDays: Number(e.target.value) || 1 })
+              }
+              min={0}
+              helperText="0 = no reminder"
+            />
+
+            <div className="flex justify-end gap-3 pt-4">
               <Button variant="secondary" onClick={() => setShowLinkModal(false)}>
                 Cancel
               </Button>
@@ -300,46 +418,6 @@ export default function FormBuilderPage() {
                 Link Form
               </Button>
             </div>
-          }
-        >
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Booking Type <span className="text-red-500">*</span>
-              </label>
-              <select
-                className="input"
-                value={linkData.bookingTypeId}
-                onChange={(e) => setLinkData({ ...linkData, bookingTypeId: e.target.value })}
-              >
-                <option value="">Select booking type</option>
-                {bookingTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                className="w-4 h-4 text-primary-600 rounded"
-                checked={linkData.sendAfterBooking}
-                onChange={(e) => setLinkData({ ...linkData, sendAfterBooking: e.target.checked })}
-              />
-              <span className="text-sm text-gray-700">Send automatically after booking</span>
-            </label>
-
-            <Input
-              type="number"
-              label="Reminder After Days"
-              value={linkData.reminderAfterDays}
-              onChange={(e) =>
-                setLinkData({ ...linkData, reminderAfterDays: parseInt(e.target.value) || 1 })
-              }
-              min={1}
-            />
           </div>
         </Modal>
 
@@ -350,28 +428,39 @@ export default function FormBuilderPage() {
           title="Form Submissions"
           size="xl"
         >
-          <div className="space-y-3">
-            {form?.submissions && form.submissions.length > 0 ? (
-              form.submissions.map((submission: any) => (
-                <div key={submission.id} className="p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {submission.contact?.firstName} {submission.contact?.lastName}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        {new Date(submission.createdAt).toLocaleDateString()}
-                      </p>
+          <div className="p-2">
+            {form?.submissions?.length > 0 ? (
+              <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+                {form.submissions.map((submission: any) => (
+                  <div
+                    key={submission.id}
+                    className="p-4 bg-gray-50 rounded-lg border border-gray-200"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {submission.contact?.firstName || 'Unknown'}{' '}
+                          {submission.contact?.lastName || ''}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Submitted {new Date(submission.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                      <Badge
+                        variant={submission.status === 'COMPLETED' ? 'success' : 'warning'}
+                      >
+                        {submission.status}
+                      </Badge>
                     </div>
-                    <Badge variant={submission.status === 'COMPLETED' ? 'success' : 'warning'}>
-                      {submission.status}
-                    </Badge>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                <p>No submissions yet</p>
+              <div className="text-center py-12 text-gray-500">
+                <p className="text-lg font-medium">No submissions yet</p>
+                <p className="text-sm mt-2">
+                  Once customers start filling out this form, submissions will appear here.
+                </p>
               </div>
             )}
           </div>

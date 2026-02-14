@@ -123,42 +123,43 @@ export default function AlertDetailPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+      <div className="space-y-6 max-w-4xl mx-auto px-4 sm:px-6">
+        {/* Header - stack on mobile */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center space-x-3">
             <Button variant="ghost" size="sm" onClick={() => router.push('/alerts')}>
               <ArrowLeft className="w-4 h-4 mr-1" />
-              Back
+              <span className="hidden sm:inline">Back</span>
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Alert Details</h1>
-              <p className="text-gray-600 mt-1">View and manage this alert</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words">Alert Details</h1>
+              <p className="text-sm sm:text-base text-gray-600 mt-1">View and manage this alert</p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
+          {/* Action buttons - wrap on mobile */}
+          <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:space-x-2">
             {alert.status === 'ACTIVE' && (
               <>
-                <Button variant="secondary" onClick={handleAcknowledge}>
-                  <Check className="w-4 h-4 mr-2" />
-                  Acknowledge
+                <Button variant="secondary" size="sm" onClick={handleAcknowledge}>
+                  <Check className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Acknowledge</span>
                 </Button>
-                <Button variant="primary" onClick={handleResolve}>
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Resolve
+                <Button variant="primary" size="sm" onClick={handleResolve}>
+                  <CheckCircle className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Resolve</span>
                 </Button>
               </>
             )}
             {alert.status === 'ACKNOWLEDGED' && (
-              <Button variant="primary" onClick={handleResolve}>
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Resolve
+              <Button variant="primary" size="sm" onClick={handleResolve}>
+                <CheckCircle className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Resolve</span>
               </Button>
             )}
-            <Button variant="danger" onClick={handleDelete}>
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete
+            <Button variant="danger" size="sm" onClick={handleDelete}>
+              <Trash2 className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Delete</span>
             </Button>
           </div>
         </div>
@@ -174,14 +175,14 @@ export default function AlertDetailPage() {
         {/* Alert Content */}
         <Card>
           <div className="space-y-6">
-            {/* Title and Badges */}
-            <div className="flex items-start space-x-4">
-              <div className={`p-4 rounded-lg ${getAlertPriorityColor(alert.priority)}`}>
+            {/* Title and Badges - stack on mobile */}
+            <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+              <div className={`p-4 rounded-lg ${getAlertPriorityColor(alert.priority)} self-start`}>
                 <span className="text-3xl">{getPriorityIcon(alert.priority)}</span>
               </div>
 
               <div className="flex-1">
-                <h2 className="text-2xl font-bold text-gray-900 mb-3">{alert.title}</h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 break-words">{alert.title}</h2>
 
                 <div className="flex flex-wrap gap-2">
                   <Badge
@@ -218,7 +219,7 @@ export default function AlertDetailPage() {
             {/* Message */}
             <div className="pt-4 border-t border-gray-200">
               <h3 className="font-semibold text-gray-900 mb-2">Message</h3>
-              <p className="text-gray-700 whitespace-pre-wrap">{alert.message}</p>
+              <p className="text-sm sm:text-base text-gray-700 whitespace-pre-wrap break-words">{alert.message}</p>
             </div>
 
             {/* Entity Information */}
@@ -226,13 +227,13 @@ export default function AlertDetailPage() {
               <div className="pt-4 border-t border-gray-200">
                 <h3 className="font-semibold text-gray-900 mb-3">Related Entity</h3>
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-medium text-gray-700">
                         Type: {alert.entityType.replace(/_/g, ' ')}
                       </p>
                       {alert.entityId && (
-                        <p className="text-xs text-gray-500 mt-1">ID: {alert.entityId}</p>
+                        <p className="text-xs text-gray-500 mt-1 break-all">ID: {alert.entityId}</p>
                       )}
                     </div>
 
@@ -241,6 +242,7 @@ export default function AlertDetailPage() {
                         variant="secondary"
                         size="sm"
                         onClick={() => router.push(getEntityLink()!)}
+                        className="self-start sm:self-center"
                       >
                         <ExternalLink className="w-4 h-4 mr-1" />
                         View Entity
@@ -259,10 +261,10 @@ export default function AlertDetailPage() {
                   href={alert.actionUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center text-primary-600 hover:text-primary-700 font-medium"
+                  className="inline-flex items-center text-primary-600 hover:text-primary-700 font-medium text-sm break-all"
                 >
                   {alert.actionUrl}
-                  <ExternalLink className="w-4 h-4 ml-1" />
+                  <ExternalLink className="w-4 h-4 ml-1 flex-shrink-0" />
                 </a>
               </div>
             )}
@@ -273,12 +275,12 @@ export default function AlertDetailPage() {
               <div className="space-y-3">
                 {/* Created */}
                 <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                  <div className="flex-1">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                  <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900">Alert Created</p>
                     <div className="flex items-center space-x-2 text-xs text-gray-500 mt-1">
-                      <Clock className="w-3 h-3" />
-                      <span>{formatDate(alert.createdAt, 'MMM dd, yyyy h:mm a')}</span>
+                      <Clock className="w-3 h-3 flex-shrink-0" />
+                      <span className="break-words">{formatDate(alert.createdAt, 'MMM dd, yyyy h:mm a')}</span>
                     </div>
                   </div>
                 </div>
@@ -286,15 +288,15 @@ export default function AlertDetailPage() {
                 {/* Acknowledged */}
                 {alert.acknowledgedAt && (
                   <div className="flex items-start space-x-3">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
-                    <div className="flex-1">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900">Acknowledged</p>
                       <div className="flex items-center space-x-2 text-xs text-gray-500 mt-1">
-                        <Clock className="w-3 h-3" />
-                        <span>{formatDate(alert.acknowledgedAt, 'MMM dd, yyyy h:mm a')}</span>
+                        <Clock className="w-3 h-3 flex-shrink-0" />
+                        <span className="break-words">{formatDate(alert.acknowledgedAt, 'MMM dd, yyyy h:mm a')}</span>
                       </div>
                       {alert.acknowledgedBy && (
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 mt-1 break-all">
                           By User ID: {alert.acknowledgedBy}
                         </p>
                       )}
@@ -305,12 +307,12 @@ export default function AlertDetailPage() {
                 {/* Resolved */}
                 {alert.resolvedAt && (
                   <div className="flex items-start space-x-3">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-                    <div className="flex-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900">Resolved</p>
                       <div className="flex items-center space-x-2 text-xs text-gray-500 mt-1">
-                        <Clock className="w-3 h-3" />
-                        <span>{formatDate(alert.resolvedAt, 'MMM dd, yyyy h:mm a')}</span>
+                        <Clock className="w-3 h-3 flex-shrink-0" />
+                        <span className="break-words">{formatDate(alert.resolvedAt, 'MMM dd, yyyy h:mm a')}</span>
                       </div>
                     </div>
                   </div>
@@ -321,14 +323,14 @@ export default function AlertDetailPage() {
             {/* Metadata */}
             <div className="pt-4 border-t border-gray-200">
               <h3 className="font-semibold text-gray-900 mb-3">Additional Information</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-gray-500">Alert ID</p>
-                  <p className="text-gray-900 font-mono text-xs mt-1">{alert.id}</p>
+                  <p className="text-gray-900 font-mono text-xs mt-1 break-all">{alert.id}</p>
                 </div>
                 <div>
                   <p className="text-gray-500">Workspace ID</p>
-                  <p className="text-gray-900 font-mono text-xs mt-1">{alert.workspaceId}</p>
+                  <p className="text-gray-900 font-mono text-xs mt-1 break-all">{alert.workspaceId}</p>
                 </div>
               </div>
             </div>

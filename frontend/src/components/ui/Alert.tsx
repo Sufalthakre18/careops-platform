@@ -9,6 +9,7 @@ interface AlertProps {
   onClose?: () => void;
   autoClose?: boolean;
   duration?: number;
+  className?: string;          // ← Added this line
 }
 
 export default function Alert({
@@ -17,6 +18,7 @@ export default function Alert({
   onClose,
   autoClose = true,
   duration = 5000,
+  className = '',              // ← Default empty string
 }: AlertProps) {
   useEffect(() => {
     if (autoClose && onClose) {
@@ -55,13 +57,22 @@ export default function Alert({
   const { bg, border, text, icon: Icon } = styles[type];
 
   return (
-    <div className={`${bg} ${border} ${text} border rounded-lg p-4 flex items-start space-x-3`}>
+    <div
+      className={`
+        ${bg} ${border} ${text} border rounded-lg p-4 flex items-start space-x-3
+        shadow-sm transition-all duration-200
+        ${className}
+      `}
+      role="alert"
+    >
       <Icon className="w-5 h-5 shrink-0 mt-0.5" />
       <p className="flex-1 text-sm font-medium">{message}</p>
+
       {onClose && (
         <button
           onClick={onClose}
-          className={`${text} hover:opacity-70 transition-opacity`}
+          className={`${text} hover:opacity-70 transition-opacity focus:outline-none`}
+          aria-label="Close alert"
         >
           <X className="w-5 h-5" />
         </button>

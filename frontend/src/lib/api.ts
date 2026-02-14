@@ -108,6 +108,19 @@ export const bookingTypeAPI = {
 
   delete: (id: string) =>
     api.delete(`/bookings/types/${id}`),
+
+  // Availability endpoints
+  getAvailability: (typeId: string) =>
+    api.get(`/bookings/types/${typeId}/availability`),
+
+  addAvailability: (typeId: string, data: { dayOfWeek: string; startTime: string; endTime: string }) =>
+    api.post(`/bookings/types/${typeId}/availability`, data),
+
+  deleteAvailability: (availabilityId: string) =>
+    api.delete(`/bookings/availability/${availabilityId}`),
+
+  getAvailableSlots: (typeId: string, date: string) =>
+    api.get(`/bookings/types/${typeId}/available-slots`, { params: { date } }),
 };
 
 // Booking APIs
