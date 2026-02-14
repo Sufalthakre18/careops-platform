@@ -11,9 +11,12 @@ import Loading from '@/components/ui/Loading';
 import Alert from '@/components/ui/Alert';
 import { integrationAPI } from '@/lib/api';
 import { handleApiError } from '@/lib/utils';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Zap, Mail, MessageSquare, Calendar, Webhook, CheckCircle, XCircle } from 'lucide-react';
 
 export default function IntegrationsPage() {
+  const router = useRouter();
   const [integrations, setIntegrations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -46,7 +49,26 @@ export default function IntegrationsPage() {
   const loadIntegrations = async () => {
     try {
       const response = await integrationAPI.getAll();
-      setIntegrations(response.data.data);
+      let loadedIntegrations = response.data.data;
+
+      // Add built-in calendar integration if not present
+      const hasCalendar = loadedIntegrations.some((i:any) => i.type === 'CALENDAR');
+      if (!hasCalendar) {
+        loadedIntegrations = [
+          ...loadedIntegrations,
+          {
+            id: 'built-in-calendar',
+            type: 'CALENDAR',
+            provider: 'Built-in',
+            status: 'CONNECTED',
+            config: {},
+            lastSyncAt: null,
+            errorMessage: null,
+          }
+        ];
+      }
+
+      setIntegrations(loadedIntegrations);
     } catch (error) {
       console.error('Error loading integrations:', error);
     } finally {
@@ -100,6 +122,11 @@ export default function IntegrationsPage() {
   };
 
   const handleTest = async (id: string) => {
+    if (id === 'built-in-calendar') {
+      // No test needed, just navigate
+      router.push('/integration/calendar');
+      return;
+    }
     try {
       await integrationAPI.testConnection(id);
       setAlert({ type: 'success', message: 'Connection test successful!' });
@@ -110,6 +137,11 @@ export default function IntegrationsPage() {
   };
 
   const handleRemove = async (id: string) => {
+    if (id === 'built-in-calendar') {
+      // Built-in calendar cannot be removed
+      setAlert({ type: 'error', message: 'Built-in calendar cannot be removed.' });
+      return;
+    }
     if (!confirm('Are you sure you want to remove this integration?')) return;
 
     try {
@@ -188,6 +220,14 @@ export default function IntegrationsPage() {
       color: 'bg-green-100 text-green-600',
     },
     {
+      type: 'CALENDAR',
+      name: 'Calendar',
+      description: 'Free calendar — built-in or iCal link',
+      icon: Calendar,
+      color: 'bg-amber-100 text-amber-600',
+      linkTo: '/integration/calendar',
+    },
+    {
       type: 'WEBHOOK',
       name: 'Webhook',
       description: 'Custom webhook integration',
@@ -221,64 +261,77 @@ export default function IntegrationsPage() {
         )}
 
         {/* Active Integrations */}
-        {integrations.length > 0 && (
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Active Integrations</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {integrations.map((integration) => {
-                const Icon = getIntegrationIcon(integration.type);
-                return (
-                  <Card key={integration.id}>
-                    <div className="space-y-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
-                            <Icon className="w-6 h-6 text-primary-600" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-gray-900">
-                              {integration.type}
-                            </h3>
-                            <p className="text-sm text-gray-600">{integration.provider}</p>
-                          </div>
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Active Integrations</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {integrations.map((integration) => {
+              const Icon = getIntegrationIcon(integration.type);
+              const isBuiltInCalendar = integration.id === 'built-in-calendar';
+
+              return (
+                <Card key={integration.id}>
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
+                          <Icon className="w-6 h-6 text-primary-600" />
                         </div>
-                        {integration.status === 'CONNECTED' ? (
-                          <CheckCircle className="w-5 h-5 text-green-500" />
-                        ) : (
-                          <XCircle className="w-5 h-5 text-red-500" />
-                        )}
+                        <div>
+                          <h3 className="font-semibold text-gray-900">
+                            {integration.type}
+                          </h3>
+                          <p className="text-sm text-gray-600">{integration.provider}</p>
+                        </div>
                       </div>
+                      {integration.status === 'CONNECTED' ? (
+                        <CheckCircle className="w-5 h-5 text-green-500" />
+                      ) : (
+                        <XCircle className="w-5 h-5 text-red-500" />
+                      )}
+                    </div>
 
-                      <Badge
-                        variant={integration.status === 'CONNECTED' ? 'success' : 'danger'}
-                      >
-                        {integration.status}
-                      </Badge>
+                    <Badge
+                      variant={integration.status === 'CONNECTED' ? 'success' : 'danger'}
+                    >
+                      {integration.status}
+                    </Badge>
 
-                      <div className="flex items-center space-x-2 pt-3 border-t border-gray-200">
+                    <div className="flex items-center space-x-2 pt-3 border-t border-gray-200">
+                      {isBuiltInCalendar ? (
                         <Button
                           size="sm"
                           variant="secondary"
-                          onClick={() => handleTest(integration.id)}
+                          onClick={() => router.push('/integrations/calendar')}
                           className="flex-1"
                         >
-                          Test
+                          View Calendar
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="danger"
-                          onClick={() => handleRemove(integration.id)}
-                        >
-                          Remove
-                        </Button>
-                      </div>
+                      ) : (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleTest(integration.id)}
+                            className="flex-1"
+                          >
+                            Test
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            onClick={() => handleRemove(integration.id)}
+                          >
+                            Remove
+                          </Button>
+                        </>
+                      )}
                     </div>
-                  </Card>
-                );
-              })}
-            </div>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
-        )}
+        </div>
 
         {/* Available Integrations */}
         <div>
@@ -289,7 +342,13 @@ export default function IntegrationsPage() {
             {availableIntegrations.map((integration) => {
               const Icon = integration.icon;
               const isInstalled = integrations.some(i => i.type === integration.type);
-              
+              const linkTo = (integration as { linkTo?: string }).linkTo;
+
+              // Don't show built-in calendar as "available" if already installed
+              if (integration.type === 'CALENDAR' && isInstalled) {
+                return null;
+              }
+
               return (
                 <Card key={integration.type}>
                   <div className="space-y-4">
@@ -303,17 +362,28 @@ export default function IntegrationsPage() {
                       </div>
                     </div>
 
-                    <Button
-                      variant={isInstalled ? 'secondary' : 'primary'}
-                      className="w-full"
-                      onClick={() => {
-                        if (integration.type === 'EMAIL') openEmailModal();
-                        if (integration.type === 'SMS') setShowSMSModal(true);
-                        if (integration.type === 'WEBHOOK') setShowWebhookModal(true);
-                      }}
-                    >
-                      {isInstalled ? 'Configure' : 'Setup'}
-                    </Button>
+                    {linkTo ? (
+                      <Link href={linkTo} className="block">
+                        <Button
+                          variant={isInstalled ? 'secondary' : 'primary'}
+                          className="w-full"
+                        >
+                          {isInstalled ? 'Configure' : 'Setup'}
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Button
+                        variant={isInstalled ? 'secondary' : 'primary'}
+                        className="w-full"
+                        onClick={() => {
+                          if (integration.type === 'EMAIL') openEmailModal();
+                          if (integration.type === 'SMS') setShowSMSModal(true);
+                          if (integration.type === 'WEBHOOK') setShowWebhookModal(true);
+                        }}
+                      >
+                        {isInstalled ? 'Configure' : 'Setup'}
+                      </Button>
+                    )}
                   </div>
                 </Card>
               );

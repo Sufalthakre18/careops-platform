@@ -244,36 +244,45 @@ export const setupSMSIntegration = async (req, res) => {
 };
 
 /**
- * Setup Google Calendar integration
+ * Setup calendar integration (free: built-in only or iCal URL)
+ * No paid APIs — use CareOps availability and/or a free iCal feed URL.
  */
 export const setupCalendarIntegration = async (req, res) => {
-  const { credentials } = req.body;
+  const { icalUrl, useBuiltInOnly } = req.body;
 
-  // TODO: Validate Google credentials and get access token
+  const useBuiltIn = useBuiltInOnly === true || useBuiltInOnly === 'true';
+  const hasIcalUrl = typeof icalUrl === 'string' && icalUrl.trim().length > 0;
+
+  const provider = 'careops_calendar';
+  const config = useBuiltIn && !hasIcalUrl
+    ? { useBuiltInOnly: true }
+    : { icalUrl: (icalUrl || '').trim(), useBuiltInOnly: false };
 
   const integration = await prisma.integration.upsert({
     where: {
       workspaceId_type_provider: {
         workspaceId: req.workspaceId,
         type: 'CALENDAR',
-        provider: 'google_calendar',
+        provider,
       },
     },
     create: {
       workspaceId: req.workspaceId,
       type: 'CALENDAR',
-      provider: 'google_calendar',
+      provider,
       status: 'CONNECTED',
-      config: credentials,
+      config,
+      lastSyncAt: new Date(),
     },
     update: {
       status: 'CONNECTED',
-      config: credentials,
+      config,
+      lastSyncAt: new Date(),
       errorMessage: null,
     },
   });
 
-  console.info(`Calendar integration setup for workspace: ${req.workspaceId}`);
+  console.info(`Calendar integration setup for workspace: ${req.workspaceId} (${provider})`);
 
   res.status(201).json({
     success: true,
@@ -400,3 +409,4 @@ export const setupWebhook = async (req, res) => {
     },
   });
 };
+

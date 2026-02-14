@@ -15,6 +15,8 @@ import {
   Zap,
   UserPlus,
   Bell,
+  BarChart3,
+  Workflow,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -27,12 +29,14 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
   { name: 'Bookings', href: '/bookings', icon: Calendar },
   { name: 'Contacts', href: '/contacts', icon: Users },
   { name: 'Inbox', href: '/inbox', icon: MessageSquare },
   { name: 'Forms', href: '/forms', icon: FileText },
   { name: 'Inventory', href: '/inventory', icon: Package },
   { name: 'Alerts', href: '/alerts', icon: Bell },
+  { name: 'Automation', href: '/dashboard/automation', icon: Workflow },
   { name: 'Integrations', href: '/integrations', icon: Zap, ownerOnly: true },
   { name: 'Staff', href: '/staff', icon: UserPlus, ownerOnly: true },
   { name: 'Settings', href: '/settings', icon: Settings, ownerOnly: true },

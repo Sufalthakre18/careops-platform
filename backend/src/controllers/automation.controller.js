@@ -282,6 +282,7 @@ export const getAutomationTemplates = async (req, res) => {
   });
 };
 
+
 /**
  * Create automation rule from template
  */
@@ -289,7 +290,7 @@ export const createFromTemplate = async (req, res) => {
   const { templateId } = req.params;
   const { config: customConfig } = req.body || {};
 
-  // Get template
+  // Get template - FIXED: All 6 template IDs now match
   const templates = {
     'welcome-email': {
       name: 'Welcome Email for New Contacts',
@@ -309,6 +310,24 @@ export const createFromTemplate = async (req, res) => {
         template: '<h1>Booking Confirmed!</h1>',
       },
     },
+    'booking-reminder': {
+      name: 'Booking Reminder',
+      trigger: 'BOOKING_REMINDER',
+      action: 'SEND_EMAIL',
+      config: customConfig || {
+        subject: 'Reminder: Upcoming appointment',
+        template: '<h1>Appointment Reminder</h1>',
+      },
+    },
+    'form-reminder': {
+      name: 'Form Completion Reminder',
+      trigger: 'FORM_PENDING',
+      action: 'SEND_EMAIL',
+      config: customConfig || {
+        subject: 'Action Required: Complete your form',
+        template: '<h1>Form Pending</h1>',
+      },
+    },
     'low-stock-alert': {
       name: 'Low Inventory Alert',
       trigger: 'INVENTORY_LOW',
@@ -318,6 +337,17 @@ export const createFromTemplate = async (req, res) => {
         priority: 'HIGH',
         title: 'Low Inventory',
         message: 'Stock is running low',
+      },
+    },
+    'form-overdue-alert': {
+      name: 'Overdue Form Alert',
+      trigger: 'FORM_OVERDUE',
+      action: 'CREATE_ALERT',
+      config: customConfig || {
+        alertType: 'FORM_OVERDUE',
+        priority: 'MEDIUM',
+        title: 'Form Overdue',
+        message: 'A form submission is overdue',
       },
     },
   };

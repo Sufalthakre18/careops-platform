@@ -2,9 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { Plus, Zap, Play, Pause, Trash2, Loader2, MessageSquare, Calendar, Bell, RefreshCw } from 'lucide-react';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import Badge from '@/components/ui/Badge';
+import Loading from '@/components/ui/Loading';
+import Alert from '@/components/ui/Alert';
+import Modal from '@/components/ui/Modal';
 import { automationAPI } from '@/lib/api';
-import { useToast } from '@/components/ui/Toast';
+import { handleApiError } from '@/lib/utils';
+import { 
+  Plus, Zap, Play, Pause, Trash2, MessageSquare, 
+  Calendar, Bell, RefreshCw, Edit, FileText, Package 
+} from 'lucide-react';
 
 interface AutomationRule {
   id: string;
@@ -22,188 +32,202 @@ export default function AutomationPage() {
   const [rules, setRules] = useState<AutomationRule[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   
-  const toast = useToast();
+  const [newRule, setNewRule] = useState({
+    name: '',
+    description: '',
+    trigger: 'NEW_CONTACT',
+    action: 'SEND_EMAIL',
+    config: {},
+  });
 
   useEffect(() => {
-    loadRules();
-    loadTemplates();
+    loadData();
   }, []);
 
-  const loadRules = async () => {
+  const loadData = async () => {
+    setLoading(true);
     try {
-      const response = await automationAPI.getAll();
-      setRules(response.data.data);
+      const [rulesRes, templatesRes] = await Promise.all([
+        automationAPI.getAll(),
+        automationAPI.getTemplates(),
+      ]);
+      setRules(rulesRes.data.data);
+      setTemplates(templatesRes.data.data);
     } catch (error) {
-      toast.error('Failed to load automation rules');
+      setAlert({ type: 'error', message: handleApiError(error) });
     } finally {
       setLoading(false);
     }
   };
 
-  const loadTemplates = async () => {
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      const response = await automationAPI.getTemplates();
-      setTemplates(response.data.data);
+      await automationAPI.create(newRule);
+      setAlert({ type: 'success', message: 'Automation rule created!' });
+      setShowCreateModal(false);
+      setNewRule({
+        name: '',
+        description: '',
+        trigger: 'NEW_CONTACT',
+        action: 'SEND_EMAIL',
+        config: {},
+      });
+      loadData();
     } catch (error) {
-      console.error('Failed to load templates:', error);
+      setAlert({ type: 'error', message: handleApiError(error) });
     }
   };
 
   const handleToggle = async (id: string) => {
     try {
       await automationAPI.toggle(id);
-      toast.success('Automation rule toggled');
-      loadRules();
+      setAlert({ type: 'success', message: 'Rule toggled successfully!' });
+      loadData();
     } catch (error) {
-      toast.error('Failed to toggle rule');
+      setAlert({ type: 'error', message: handleApiError(error) });
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this automation rule?')) return;
-
+    if (!confirm('Delete this automation rule?')) return;
     try {
       await automationAPI.delete(id);
-      toast.success('Automation rule deleted');
-      loadRules();
+      setAlert({ type: 'success', message: 'Rule deleted!' });
+      loadData();
     } catch (error) {
-      toast.error('Failed to delete rule');
+      setAlert({ type: 'error', message: handleApiError(error) });
     }
   };
 
   const handleCreateFromTemplate = async (templateId: string) => {
     try {
       await automationAPI.createFromTemplate(templateId);
-      toast.success('Automation rule created from template');
+      setAlert({ type: 'success', message: 'Rule created from template!' });
       setShowTemplatesModal(false);
-      loadRules();
+      loadData();
     } catch (error) {
-      toast.error('Failed to create from template');
+      setAlert({ type: 'error', message: handleApiError(error) });
     }
   };
 
   const getTriggerIcon = (trigger: string) => {
-    switch (trigger) {
-      case 'NEW_CONTACT':
-        return <MessageSquare className="w-5 h-5" />;
-      case 'BOOKING_CREATED':
-        return <Calendar className="w-5 h-5" />;
-      case 'BOOKING_REMINDER':
-        return <Bell className="w-5 h-5" />;
-      case 'INVENTORY_LOW':
-        return <RefreshCw className="w-5 h-5" />;
-      default:
-        return <Zap className="w-5 h-5" />;
-    }
+    const icons: any = {
+      NEW_CONTACT: MessageSquare,
+      BOOKING_CREATED: Calendar,
+      BOOKING_REMINDER: Bell,
+      FORM_PENDING: FileText,
+      FORM_OVERDUE: FileText,
+      INVENTORY_LOW: Package,
+    };
+    const Icon = icons[trigger] || Zap;
+    return <Icon className="w-5 h-5" />;
   };
 
   const getTriggerLabel = (trigger: string) => {
-    return trigger.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (l) => l.toUpperCase());
+    return trigger.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
   };
 
-  const getActionBadge = (action: string) => {
-    const colors: any = {
-      SEND_EMAIL: 'bg-blue-100 text-blue-800',
-      SEND_SMS: 'bg-green-100 text-green-800',
-      CREATE_ALERT: 'bg-yellow-100 text-yellow-800',
-      UPDATE_STATUS: 'bg-purple-100 text-purple-800',
+  const getActionColor = (action: string): 'success' | 'warning' | 'danger' | 'info' | 'default' => {
+    const colors: Record<string, 'success' | 'warning' | 'danger' | 'info' | 'default'> = {
+      SEND_EMAIL: 'info',
+      SEND_SMS: 'success',
+      CREATE_ALERT: 'warning',
+      UPDATE_STATUS: 'info',
     };
-    return colors[action] || 'bg-gray-100 text-gray-800';
+    return colors[action] || 'default';
   };
 
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-screen">
-          <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
-        </div>
+        <Loading fullScreen />
       </DashboardLayout>
     );
   }
 
   return (
     <DashboardLayout>
-      <toast.ToastContainer />
-      
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Automation Rules</h1>
-            <p className="text-gray-600 mt-1">Automate your workflows and save time</p>
+            <p className="text-gray-600 mt-1">Automate workflows and save time</p>
           </div>
           <div className="flex gap-3">
-            <button
-              onClick={() => setShowTemplatesModal(true)}
-              className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition flex items-center gap-2"
-            >
-              <Zap className="w-4 h-4" />
-              Use Template
-            </button>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
+            <Button variant="secondary" onClick={() => setShowTemplatesModal(true)}>
+              <Zap className="w-4 h-4 mr-2" />
+              Templates
+            </Button>
+            <Button variant="primary" onClick={() => setShowCreateModal(true)}>
+              <Plus className="w-4 h-4 mr-2" />
               Create Rule
-            </button>
+            </Button>
           </div>
         </div>
 
+        {alert && (
+          <Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} />
+        )}
+
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
             <p className="text-sm text-gray-600">Total Rules</p>
-            <p className="text-2xl font-bold text-gray-900">{rules.length}</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <p className="text-2xl font-bold text-gray-900 mt-1">{rules.length}</p>
+          </Card>
+          <Card>
             <p className="text-sm text-gray-600">Active</p>
-            <p className="text-2xl font-bold text-green-600">
-              {rules.filter((r) => r.isActive).length}
+            <p className="text-2xl font-bold text-green-600 mt-1">
+              {rules.filter(r => r.isActive).length}
             </p>
-          </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
+          </Card>
+          <Card>
             <p className="text-sm text-gray-600">Inactive</p>
-            <p className="text-2xl font-bold text-gray-400">
-              {rules.filter((r) => !r.isActive).length}
+            <p className="text-2xl font-bold text-gray-400 mt-1">
+              {rules.filter(r => !r.isActive).length}
             </p>
-          </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
+          </Card>
+          <Card>
             <p className="text-sm text-gray-600">Total Executions</p>
-            <p className="text-2xl font-bold text-primary-600">
+            <p className="text-2xl font-bold text-primary-600 mt-1">
               {rules.reduce((sum, r) => sum + r.executionCount, 0)}
             </p>
-          </div>
+          </Card>
         </div>
 
         {/* Rules List */}
         <div className="space-y-4">
           {rules.length === 0 ? (
-            <div className="bg-white p-12 rounded-lg border border-gray-200 text-center">
-              <Zap className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No automation rules yet</h3>
-              <p className="text-gray-600 mb-4">Create your first automation rule to get started</p>
-              <button
-                onClick={() => setShowTemplatesModal(true)}
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
-              >
-                Browse Templates
-              </button>
-            </div>
+            <Card>
+              <div className="text-center py-12">
+                <Zap className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  No automation rules yet
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  Create your first automation to get started
+                </p>
+                <Button variant="primary" onClick={() => setShowTemplatesModal(true)}>
+                  Browse Templates
+                </Button>
+              </div>
+            </Card>
           ) : (
             rules.map((rule) => (
-              <div
-                key={rule.id}
-                className="bg-white p-6 rounded-lg border border-gray-200 hover:shadow-md transition"
-              >
+              <Card key={rule.id}>
                 <div className="flex items-start justify-between">
                   <div className="flex gap-4 flex-1">
                     <div
                       className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                        rule.isActive ? 'bg-primary-100 text-primary-600' : 'bg-gray-100 text-gray-400'
+                        rule.isActive
+                          ? 'bg-primary-100 text-primary-600'
+                          : 'bg-gray-100 text-gray-400'
                       }`}
                     >
                       {getTriggerIcon(rule.trigger)}
@@ -211,114 +235,167 @@ export default function AutomationPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-lg font-semibold text-gray-900">{rule.name}</h3>
-                        <span
-                          className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            rule.isActive
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
-                        >
+                        <Badge variant={rule.isActive ? 'success' : 'default'}>
                           {rule.isActive ? 'Active' : 'Inactive'}
-                        </span>
+                        </Badge>
                       </div>
                       {rule.description && (
                         <p className="text-sm text-gray-600 mb-3">{rule.description}</p>
                       )}
                       <div className="flex items-center gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-500">Trigger:</span>
+                        <div>
+                          <span className="text-gray-500">Trigger: </span>
                           <span className="font-medium text-gray-900">
                             {getTriggerLabel(rule.trigger)}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-500">Action:</span>
-                          <span
-                            className={`px-2 py-0.5 text-xs font-medium rounded ${getActionBadge(
-                              rule.action
-                            )}`}
-                          >
+                        <div>
+                          <span className="text-gray-500">Action: </span>
+                          <Badge variant={getActionColor(rule.action)}>
                             {rule.action.replace(/_/g, ' ')}
-                          </span>
+                          </Badge>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-500">Executed:</span>
-                          <span className="font-medium text-gray-900">{rule.executionCount}x</span>
+                        <div>
+                          <span className="text-gray-500">Executed: </span>
+                          <span className="font-medium text-gray-900">
+                            {rule.executionCount}x
+                          </span>
                         </div>
                       </div>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button
+                    <Button
+                      size="sm"
+                      variant={rule.isActive ? 'secondary' : 'primary'}
                       onClick={() => handleToggle(rule.id)}
-                      className={`p-2 rounded-lg transition ${
-                        rule.isActive
-                          ? 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                          : 'bg-green-100 hover:bg-green-200 text-green-700'
-                      }`}
-                      title={rule.isActive ? 'Pause' : 'Activate'}
                     >
-                      {rule.isActive ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                    </button>
-                    <button
-                      onClick={() => handleDelete(rule.id)}
-                      className="p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition"
-                      title="Delete"
-                    >
+                      {rule.isActive ? (
+                        <Pause className="w-4 h-4" />
+                      ) : (
+                        <Play className="w-4 h-4" />
+                      )}
+                    </Button>
+                    <Button size="sm" variant="danger" onClick={() => handleDelete(rule.id)}>
                       <Trash2 className="w-4 h-4" />
-                    </button>
+                    </Button>
                   </div>
                 </div>
-              </div>
+              </Card>
             ))
           )}
         </div>
 
+        {/* Create Modal */}
+        <Modal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          title="Create Automation Rule"
+          footer={
+            <div className="flex space-x-3">
+              <Button variant="secondary" onClick={() => setShowCreateModal(false)}>
+                Cancel
+              </Button>
+              <Button variant="primary" onClick={handleCreate}>
+                Create Rule
+              </Button>
+            </div>
+          }
+        >
+          <form onSubmit={handleCreate} className="space-y-4">
+            <Input
+              label="Rule Name"
+              value={newRule.name}
+              onChange={(e) => setNewRule({ ...newRule, name: e.target.value })}
+              placeholder="Welcome Email"
+              required
+            />
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Description
+              </label>
+              <textarea
+                value={newRule.description}
+                onChange={(e) => setNewRule({ ...newRule, description: e.target.value })}
+                placeholder="Send welcome email to new contacts"
+                className="input"
+                rows={2}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Trigger
+              </label>
+              <select
+                className="input"
+                value={newRule.trigger}
+                onChange={(e) => setNewRule({ ...newRule, trigger: e.target.value })}
+              >
+                <option value="NEW_CONTACT">New Contact</option>
+                <option value="BOOKING_CREATED">Booking Created</option>
+                <option value="BOOKING_REMINDER">Booking Reminder</option>
+                <option value="FORM_PENDING">Form Pending</option>
+                <option value="FORM_OVERDUE">Form Overdue</option>
+                <option value="INVENTORY_LOW">Inventory Low</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Action
+              </label>
+              <select
+                className="input"
+                value={newRule.action}
+                onChange={(e) => setNewRule({ ...newRule, action: e.target.value })}
+              >
+                <option value="SEND_EMAIL">Send Email</option>
+                <option value="SEND_SMS">Send SMS</option>
+                <option value="CREATE_ALERT">Create Alert</option>
+                <option value="UPDATE_STATUS">Update Status</option>
+              </select>
+            </div>
+          </form>
+        </Modal>
+
         {/* Templates Modal */}
-        {showTemplatesModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-gray-900">Automation Templates</h2>
-                <button
-                  onClick={() => setShowTemplatesModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="space-y-3">
-                {templates.map((template) => (
-                  <div
-                    key={template.id}
-                    className="p-4 border border-gray-200 rounded-lg hover:border-primary-300 transition"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 mb-1">{template.name}</h3>
-                        <p className="text-sm text-gray-600 mb-2">{template.description}</p>
-                        <div className="flex gap-2">
-                          <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded">
-                            {getTriggerLabel(template.trigger)}
-                          </span>
-                          <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
-                            {template.action.replace(/_/g, ' ')}
-                          </span>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleCreateFromTemplate(template.id)}
-                        className="ml-4 px-4 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700 transition"
-                      >
-                        Use Template
-                      </button>
+        <Modal
+          isOpen={showTemplatesModal}
+          onClose={() => setShowTemplatesModal(false)}
+          title="Automation Templates"
+          size="lg"
+        >
+          <div className="space-y-3">
+            {templates.map((template) => (
+              <div
+                key={template.id}
+                className="p-4 border border-gray-200 rounded-lg hover:border-primary-500 transition"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900 mb-1">{template.name}</h3>
+                    <p className="text-sm text-gray-600 mb-3">{template.description}</p>
+                    <div className="flex gap-2">
+                      <Badge variant="default">{getTriggerLabel(template.trigger)}</Badge>
+                      <Badge variant={getActionColor(template.action)}>
+                        {template.action.replace(/_/g, ' ')}
+                      </Badge>
                     </div>
                   </div>
-                ))}
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    onClick={() => handleCreateFromTemplate(template.id)}
+                  >
+                    Use Template
+                  </Button>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
-        )}
+        </Modal>
       </div>
     </DashboardLayout>
   );

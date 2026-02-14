@@ -246,11 +246,15 @@ export const integrationAPI = {
   createWebhook: (data: any) =>
     api.post('/integrations/webhook', data),
 
+  createCalendar: (data: { icalUrl?: string; useBuiltInOnly?: boolean }) =>
+    api.post('/integrations/calendar', data),
+
   delete: (id: string) =>
     api.delete(`/integrations/${id}`),
 
   testConnection: (id: string) =>
     api.post(`/integrations/${id}/test`),
+  
 };
 
 // Staff APIs

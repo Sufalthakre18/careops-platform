@@ -1,9 +1,10 @@
 import express from 'express';
-import { body, param } from 'express-validator';
+import { body, param, query} from 'express-validator';
 import { authenticate, requireOwner } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import * as integrationController from '../controllers/integration.controller.js';
+
 
 const router = express.Router();
 
@@ -99,7 +100,7 @@ router.post(
 
 /**
  * POST /api/integrations/calendar
- * Setup Google Calendar integration
+ * Setup calendar (free: built-in only or iCal URL)
  * access  Private (Owner only)
  */
 router.post(
@@ -107,57 +108,12 @@ router.post(
   authenticate,
   requireOwner,
   [
-    body('credentials').isObject().withMessage('Google credentials are required'),
+    body('icalUrl').optional().trim().isString(),
+    body('useBuiltInOnly').optional().isBoolean(),
     validate,
   ],
   asyncHandler(integrationController.setupCalendarIntegration)
 );
 
-/**
- * POST /api/integrations/:id/test
- * Test integration connection
- * access  Private (Owner only)
- */
-router.post(
-  '/:id/test',
-  authenticate,
-  requireOwner,
-  [param('id').isUUID(), validate],
-  asyncHandler(integrationController.testIntegration)
-);
-
-/**
- * DELETE /api/integrations/:id
- * Remove integration
- * access  Private (Owner only)
- */
-router.delete(
-  '/:id',
-  authenticate,
-  requireOwner,
-  [param('id').isUUID(), validate],
-  asyncHandler(integrationController.removeIntegration)
-);
-
-/**
- * POST /api/integrations/webhook
- * Setup webhook integration
- * access  Private (Owner only)
- */
-router.post(
-  '/webhook',
-  authenticate,
-  requireOwner,
-  [
-    body('url').isURL().withMessage('Valid webhook URL is required'),
-    body('events').isArray({ min: 1 }).withMessage('At least one event is required'),
-    body('secret').optional(),
-    validate,
-  ],
-  asyncHandler(integrationController.setupWebhook)
-);
-
 export default router;
 
-
-// Get all integrations,Get intergration by id, setup email, updated email done. Now  test rest of api after frontend
