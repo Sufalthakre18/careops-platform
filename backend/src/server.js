@@ -21,6 +21,7 @@ import integrationRoutes from './routes/integration.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import automationRoutes from './routes/automation.routes.js';
 import staffRoutes from './routes/staff.routes.js'
+import aiRoutes from './routes/ai.routes.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -99,6 +100,8 @@ app.use('/api/integrations', integrationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/automation', automationRoutes);
 app.use('/api/staff', staffRoutes);
+app.use('/api/ai', aiRoutes);
+
 
 app.use(notFound);
 app.use(errorHandler);

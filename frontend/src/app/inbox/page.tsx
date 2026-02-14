@@ -4,16 +4,16 @@ import React, { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
 import Loading from '@/components/ui/Loading';
 import Alert from '@/components/ui/Alert';
 import { conversationAPI } from '@/lib/api';
 import { formatRelativeTime, handleApiError } from '@/lib/utils';
-import { MessageSquare, Send, Mail, Phone } from 'lucide-react';
+import { MessageSquare, Send, Mail, Phone, X, Check } from 'lucide-react';
 
 export default function InboxPage() {
   const [conversations, setConversations] = useState<any[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
-  const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [newMessage, setNewMessage] = useState('');
@@ -34,19 +34,16 @@ export default function InboxPage() {
     }
   };
 
-  const loadMessages = async (conversationId: string) => {
-    try {
-      const response = await conversationAPI.getMessages(conversationId);
-      setMessages(response.data.data);
-      await conversationAPI.markAsRead(conversationId);
-    } catch (error) {
-      console.error('Error loading messages:', error);
-    }
-  };
-
   const handleSelectConversation = async (conversation: any) => {
     setSelectedConversation(conversation);
-    await loadMessages(conversation.id);
+    
+    // Reload conversation to get latest messages
+    try {
+      const response = await conversationAPI.getById(conversation.id);
+      setSelectedConversation(response.data.data);
+    } catch (error) {
+      console.error('Error loading conversation:', error);
+    }
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -55,18 +52,48 @@ export default function InboxPage() {
 
     setSendingMessage(true);
     try {
-      await conversationAPI.sendMessage(selectedConversation.id, {
-        content: newMessage,
-        type: 'TEXT',
-        channel: 'MANUAL',
+      const response = await conversationAPI.sendMessage(selectedConversation.id, {
+        body: newMessage,
+        channel: 'EMAIL',
+        direction: 'OUTBOUND',
+        sender: 'workspace@example.com', // Should be from workspace settings
+        recipient: selectedConversation.contact.email,
       });
+
+      // Update selected conversation with new messages
+      setSelectedConversation(response.data.data);
+      
+      // Update conversations list
+      const updatedConversations = conversations.map(conv => 
+        conv.id === selectedConversation.id ? response.data.data : conv
+      );
+      setConversations(updatedConversations);
+
       setNewMessage('');
-      await loadMessages(selectedConversation.id);
       setAlert({ type: 'success', message: 'Message sent successfully!' });
     } catch (error) {
       setAlert({ type: 'error', message: handleApiError(error) });
     } finally {
       setSendingMessage(false);
+    }
+  };
+
+  const handleUpdateStatus = async (status: string) => {
+    if (!selectedConversation) return;
+
+    try {
+      const response = await conversationAPI.updateStatus(selectedConversation.id, status);
+      setSelectedConversation(response.data.data);
+      
+      // Update in conversations list
+      const updatedConversations = conversations.map(conv => 
+        conv.id === selectedConversation.id ? response.data.data : conv
+      );
+      setConversations(updatedConversations);
+
+      setAlert({ type: 'success', message: `Conversation marked as ${status}!` });
+    } catch (error) {
+      setAlert({ type: 'error', message: handleApiError(error) });
     }
   };
 
@@ -109,24 +136,36 @@ export default function InboxPage() {
                         : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'
                     }`}
                   >
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
                         <h4 className="font-medium text-gray-900">
-                          {conversation.contact.firstName} {conversation.contact.lastName}
+                          {conversation.contact?.firstName} {conversation.contact?.lastName}
                         </h4>
                         <p className="text-sm text-gray-600 mt-1 truncate">
-                          {conversation.contact.email}
+                          {conversation.contact?.email}
                         </p>
                       </div>
-                      {conversation.unreadCount > 0 && (
-                        <span className="bg-primary-600 text-white text-xs font-medium px-2 py-1 rounded-full">
-                          {conversation.unreadCount}
-                        </span>
-                      )}
+                      <Badge
+                        variant={
+                          conversation.status === 'OPEN'
+                            ? 'success'
+                            : conversation.status === 'PENDING'
+                            ? 'warning'
+                            : 'default'
+                        }
+                      >
+                        {conversation.status}
+                      </Badge>
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">
-                      {formatRelativeTime(conversation.updatedAt)}
+
+                    <p className="text-sm text-gray-700 mb-2 truncate">
+                      {conversation.subject || 'No subject'}
                     </p>
+
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span>{conversation.messages?.length || 0} messages</span>
+                      <span>{formatRelativeTime(conversation.lastMessageAt || conversation.createdAt)}</span>
+                    </div>
                   </div>
                 ))
               ) : (
@@ -144,64 +183,117 @@ export default function InboxPage() {
               <div className="flex flex-col h-[600px]">
                 {/* Header */}
                 <div className="pb-4 border-b border-gray-200">
-                  <h3 className="font-semibold text-gray-900">
-                    {selectedConversation.contact.firstName}{' '}
-                    {selectedConversation.contact.lastName}
-                  </h3>
-                  <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
-                    <div className="flex items-center">
-                      <Mail className="w-4 h-4 mr-1" />
-                      {selectedConversation.contact.email}
-                    </div>
-                    {selectedConversation.contact.phone && (
-                      <div className="flex items-center">
-                        <Phone className="w-4 h-4 mr-1" />
-                        {selectedConversation.contact.phone}
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900">
+                        {selectedConversation.contact?.firstName}{' '}
+                        {selectedConversation.contact?.lastName}
+                      </h3>
+                      <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
+                        <div className="flex items-center">
+                          <Mail className="w-4 h-4 mr-1" />
+                          {selectedConversation.contact?.email}
+                        </div>
+                        {selectedConversation.contact?.phone && (
+                          <div className="flex items-center">
+                            <Phone className="w-4 h-4 mr-1" />
+                            {selectedConversation.contact?.phone}
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        size="sm"
+                        variant={selectedConversation.status === 'OPEN' ? 'primary' : 'secondary'}
+                        onClick={() => handleUpdateStatus('OPEN')}
+                      >
+                        Open
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={selectedConversation.status === 'PENDING' ? 'primary' : 'secondary'}
+                        onClick={() => handleUpdateStatus('PENDING')}
+                      >
+                        Pending
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={selectedConversation.status === 'CLOSED' ? 'primary' : 'secondary'}
+                        onClick={() => handleUpdateStatus('CLOSED')}
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        Close
+                      </Button>
+                    </div>
                   </div>
+
+                  {selectedConversation.subject && (
+                    <p className="text-sm text-gray-600 mt-2">
+                      <span className="font-medium">Subject:</span> {selectedConversation.subject}
+                    </p>
+                  )}
                 </div>
 
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto py-4 space-y-4">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${
-                        message.direction === 'OUTBOUND' ? 'justify-end' : 'justify-start'
-                      }`}
-                    >
+                  {selectedConversation.messages && selectedConversation.messages.length > 0 ? (
+                    selectedConversation.messages.map((message: any) => (
                       <div
-                        className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                          message.direction === 'OUTBOUND'
-                            ? 'bg-primary-600 text-white'
-                            : 'bg-gray-100 text-gray-900'
+                        key={message.id}
+                        className={`flex ${
+                          message.direction === 'OUTBOUND' ? 'justify-end' : 'justify-start'
                         }`}
                       >
-                        <p className="text-sm">{message.content}</p>
-                        <p
-                          className={`text-xs mt-1 ${
+                        <div
+                          className={`max-w-[70%] rounded-lg px-4 py-3 ${
                             message.direction === 'OUTBOUND'
-                              ? 'text-primary-100'
-                              : 'text-gray-500'
+                              ? 'bg-primary-600 text-white'
+                              : 'bg-gray-100 text-gray-900'
                           }`}
                         >
-                          {formatRelativeTime(message.createdAt)}
-                        </p>
+                          {message.subject && (
+                            <p className="text-xs font-medium mb-1 opacity-80">
+                              {message.subject}
+                            </p>
+                          )}
+                          <p className="text-sm whitespace-pre-wrap">{message.body}</p>
+                          <div className="flex items-center justify-between mt-2 text-xs opacity-75">
+                            <span>
+                              {formatRelativeTime(message.createdAt)}
+                            </span>
+                            {message.channel && (
+                              <span className="uppercase text-[10px]">
+                                {message.channel}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-12 text-gray-500">
+                      <p>No messages in this conversation yet</p>
                     </div>
-                  ))}
+                  )}
                 </div>
 
                 {/* Send Message Form */}
                 <form onSubmit={handleSendMessage} className="pt-4 border-t border-gray-200">
                   <div className="flex space-x-2">
-                    <input
-                      type="text"
+                    <textarea
                       placeholder="Type your message..."
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                      rows={2}
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage(e);
+                        }
+                      }}
                     />
                     <Button
                       type="submit"
@@ -212,6 +304,9 @@ export default function InboxPage() {
                       <Send className="w-5 h-5" />
                     </Button>
                   </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Press Enter to send, Shift+Enter for new line
+                  </p>
                 </form>
               </div>
             ) : (

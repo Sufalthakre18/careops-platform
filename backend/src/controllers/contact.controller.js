@@ -131,6 +131,16 @@ export const createContactAdmin = async (req, res) => {
     },
   });
 
+  // ✅ CREATE CONVERSATION (was missing!)
+  const conversation = await prisma.conversation.create({
+    data: {
+      workspaceId: req.workspaceId,
+      contactId: contact.id,
+      subject: 'New Contact',
+      status: 'OPEN',
+    },
+  });
+
   // ✅ Set contactFormSetup flag
   await prisma.workspace.update({
     where: { id: req.workspaceId },

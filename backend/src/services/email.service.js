@@ -298,6 +298,44 @@ export const sendInventoryAlert = async (inventoryItem, workspace) => {
     html,
   });
 };
+/**
+ * Send message notification email
+ */
+export const sendMessageNotification = async (message, contact, workspace) => {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #4F46E5; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background-color: #f9fafb; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>New Message from ${workspace.businessName}</h1>
+        </div>
+        <div class="content">
+          <p>Hi ${contact.firstName || 'there'},</p>
+          <p>You have received a new message:</p>
+          <p><strong>${message.body}</strong></p>
+          <p>Best regards,<br>${workspace.businessName} Team</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: contact.email,
+    subject: `New Message - ${workspace.businessName}`,
+    html,
+  });
+};
+
 
 export default {
   sendEmail,
@@ -306,4 +344,9 @@ export default {
   sendBookingReminder,
   sendFormRequest,
   sendInventoryAlert,
+  sendMessageNotification
 };
+
+
+
+

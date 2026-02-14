@@ -1,6 +1,7 @@
 import { prisma } from '../config/prisma.js';
 import { ApiError } from '../middleware/errorHandler.js';
-import { io, emitToWorkspace } from '../server.js';
+import { emitToWorkspace } from '../server.js';
+import emailService from '../services/email.service.js';
 
 /**
  * Get all conversations for workspace
@@ -62,6 +63,11 @@ export const sendMessage = async (req, res) => {
     throw new ApiError(404, 'Conversation not found');
   }
 
+  // Get workspace info
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: conversation.workspaceId },
+  });
+
   // 1. Create the message
   const message = await prisma.message.create({
     data: {
@@ -84,7 +90,18 @@ export const sendMessage = async (req, res) => {
     include: { messages: { orderBy: { createdAt: 'asc' } }, contact: true },
   });
 
-  // 3. Emit real-time event to workspace
+  // 3. Send email if direction is OUTBOUND and channel is EMAIL
+  if (direction === 'OUTBOUND' && channel === 'EMAIL') {
+    try {
+      await emailService.sendMessageNotification(message, conversation.contact, workspace);
+      console.log('✅ Email sent to:', conversation.contact.email);
+    } catch (error) {
+      console.error('❌ Email failed:', error.message);
+      // Don't fail the request if email fails
+    }
+  }
+
+  // 4. Emit real-time event to workspace
   emitToWorkspace(conversation.workspaceId, 'new-message', {
     conversationId: conversation.id,
     message,

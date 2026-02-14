@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -258,6 +259,15 @@ export default function StaffPage() {
                   </div>
 
                   <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-200">
+                    <Link href={`/staff/${member.id}`} className="flex-1">
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        className="w-full"
+                      >
+                        Edit Details
+                      </Button>
+                    </Link>
                     <Button
                       size="sm"
                       variant="secondary"

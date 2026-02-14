@@ -153,18 +153,15 @@ export const contactAPI = {
 export const conversationAPI = {
   getAll: () =>
     api.get('/conversations'),
-
+  
   getById: (id: string) =>
     api.get(`/conversations/${id}`),
-
-  getMessages: (id: string) =>
-    api.get(`/conversations/${id}/messages`),
-
+  
   sendMessage: (id: string, data: any) =>
     api.post(`/conversations/${id}/messages`, data),
-
-  markAsRead: (id: string) =>
-    api.patch(`/conversations/${id}/read`),
+  
+  updateStatus: (id: string, status: string) =>
+    api.put(`/conversations/${id}/status`, { status }),
 };
 
 // form api
@@ -263,6 +260,9 @@ export const staffAPI = {
   
   getById: (id: string) =>
     api.get(`/staff/${id}`),
+
+  update: (id: string, data: any) =>
+    api.put(`/staff/${id}`, data),
   
   invite: (data: any) =>
     api.post('/staff/invite', data),
@@ -311,6 +311,73 @@ export const alertAPI = {
   
   bulkResolve: (alertIds: string[]) =>
     api.put('/alerts/bulk/resolve', { alertIds }),
+};
+
+
+// AI APIs
+export const aiAPI = {
+  // Chat with AI (public)
+  chat: (message: string, workspaceId: string, conversationHistory?: any[]) =>
+    api.post('/ai/chat', { message, workspaceId, conversationHistory }),
+
+  // Get AI-suggested reply
+  suggestReply: (conversationId: string) =>
+    api.post('/ai/suggest-reply', { conversationId }),
+
+  // Analyze sentiment
+  analyzeSentiment: (text: string) =>
+    api.post('/ai/analyze-sentiment', { text }),
+
+  // Extract booking intent
+  extractIntent: (message: string) =>
+    api.post('/ai/extract-intent', { message }),
+
+  // Generate form questions
+  generateFormQuestions: (description: string, numberOfQuestions?: number) =>
+    api.post('/ai/generate-form', { description, numberOfQuestions }),
+
+  // Summarize conversation
+  summarizeConversation: (conversationId: string) =>
+    api.post('/ai/summarize-conversation', { conversationId }),
+
+  // Recommend booking slot
+  recommendSlot: (preferences: string, availableSlots: string[]) =>
+    api.post('/ai/recommend-slot', { preferences, availableSlots }),
+};
+
+// Automation APIs
+export const automationAPI = {
+  // Get all automation rules
+  getAll: () => 
+    api.get('/automation'),
+
+  // Get single rule
+  getById: (id: string) => 
+    api.get(`/automation/${id}`),
+
+  // Create automation rule
+  create: (data: any) => 
+    api.post('/automation', data),
+
+  // Update automation rule
+  update: (id: string, data: any) => 
+    api.put(`/automation/${id}`, data),
+
+  // Toggle automation rule
+  toggle: (id: string) => 
+    api.put(`/automation/${id}/toggle`),
+
+  // Delete automation rule
+  delete: (id: string) => 
+    api.delete(`/automation/${id}`),
+
+  // Get templates
+  getTemplates: () => 
+    api.get('/automation/templates/list'),
+
+  // Create from template
+  createFromTemplate: (templateId: string, config?: any) =>
+    api.post(`/automation/templates/${templateId}`, { config }),
 };
 
 export default api;

@@ -5,7 +5,8 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Loading from '@/components/ui/Loading';
-import { dashboardAPI,alertAPI, workspaceAPI } from '@/lib/api';
+import AIChatbot from '@/components/AIChatbot'; // ← ADD THIS
+import { dashboardAPI, alertAPI, workspaceAPI } from '@/lib/api';
 import { formatDate, getStatusColor, handleApiError } from '@/lib/utils';
 import {
   Calendar,
@@ -16,6 +17,8 @@ import {
   TrendingUp,
   Clock,
   CheckCircle,
+  MessageCircle, // ← ADD THIS
+  X, // ← ADD THIS
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -24,6 +27,8 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<any>(null);
   const [overview, setOverview] = useState<any>(null);
   const [alerts, setAlerts] = useState<any[]>([]);
+  const [showChatbot, setShowChatbot] = useState(false); // ← ADD THIS
+  const [workspaceId, setWorkspaceId] = useState<string>(''); // ← ADD THIS
 
   useEffect(() => {
     loadDashboard();
@@ -40,6 +45,10 @@ export default function DashboardPage() {
       setStats(statsRes.data.data);
       setOverview(overviewRes.data.data);
       setAlerts(alertsRes.data.data);
+      
+      // ← ADD THIS: Get workspace ID
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      setWorkspaceId(user.workspaceId || '');
     } catch (error) {
       console.error('Error loading dashboard:', error);
     } finally {
@@ -246,6 +255,32 @@ export default function DashboardPage() {
           </div>
         </Card>
       </div>
+
+      {/* ========================================== */}
+      {/* ← ADD THIS: FLOATING AI CHATBOT */}
+      {/* ========================================== */}
+      
+      {/* Floating Button */}
+      {!showChatbot && (
+        <button
+          onClick={() => setShowChatbot(true)}
+          className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full shadow-2xl hover:shadow-3xl hover:scale-110 transition-all duration-300 flex items-center justify-center z-50 group"
+          title="AI Assistant"
+        >
+          <MessageCircle className="w-7 h-7 group-hover:scale-110 transition-transform" />
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white animate-pulse"></span>
+        </button>
+      )}
+
+      {/* Chatbot Window */}
+      {showChatbot && workspaceId && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 duration-300">
+          <AIChatbot 
+            workspaceId={workspaceId}
+            onClose={() => setShowChatbot(false)}
+          />
+        </div>
+      )}
     </DashboardLayout>
   );
 }
