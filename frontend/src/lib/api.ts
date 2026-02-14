@@ -167,46 +167,68 @@ export const conversationAPI = {
     api.patch(`/conversations/${id}/read`),
 };
 
-// Form APIs
+// form api
 export const formAPI = {
   getAll: () =>
     api.get('/forms'),
-
+  
   getById: (id: string) =>
     api.get(`/forms/${id}`),
-
+  
   create: (data: any) =>
     api.post('/forms', data),
-
+  
   update: (id: string, data: any) =>
     api.put(`/forms/${id}`, data),
-
+  
   delete: (id: string) =>
     api.delete(`/forms/${id}`),
-
-  getSubmissions: (id: string) =>
-    api.get(`/forms/${id}/submissions`),
+  
+  getAllSubmissions: (params?: any) =>
+    api.get('/forms/submissions/all', { params }),
+  
+  getSubmissionById: (id: string) =>
+    api.get(`/forms/submissions/${id}`),
+  
+  submitForm: (submissionId: string, data: any) =>
+    api.post(`/forms/submissions/${submissionId}`, { data }),
+  
+  createAndSubmit: (formId: string, data: any) =>
+    api.post(`/forms/${formId}/submissions`, { data }),
+  
+  linkToBookingType: (formId: string, bookingTypeId: string, data?: any) =>
+    api.post(`/forms/${formId}/booking-types/${bookingTypeId}`, data),
 };
+
 
 // Inventory APIs
 export const inventoryAPI = {
-  getAll: () =>
-    api.get('/inventory'),
-
+  getAll: (params?: any) =>
+    api.get('/inventory', { params }),
+  
   getById: (id: string) =>
     api.get(`/inventory/${id}`),
-
+  
   create: (data: any) =>
     api.post('/inventory', data),
-
+  
   update: (id: string, data: any) =>
     api.put(`/inventory/${id}`, data),
-
+  
   delete: (id: string) =>
     api.delete(`/inventory/${id}`),
-
+  
   adjustStock: (id: string, data: any) =>
     api.post(`/inventory/${id}/adjust`, data),
+  
+  updateQuantity: (id: string, data: any) =>
+    api.put(`/inventory/${id}/quantity`, data),
+  
+  getUsageHistory: (id: string, params?: any) =>
+    api.get(`/inventory/${id}/usage`, { params }),
+  
+  getLowStockItems: () =>
+    api.get('/inventory/alerts/low-stock'),
 };
 
 // Integration APIs
@@ -238,25 +260,25 @@ export const integrationAPI = {
 export const staffAPI = {
   getAll: () =>
     api.get('/staff'),
-
+  
   getById: (id: string) =>
     api.get(`/staff/${id}`),
-
+  
   invite: (data: any) =>
     api.post('/staff/invite', data),
-
+  
   updatePermissions: (id: string, permissions: any) =>
-    api.put(`/staff/${id}/permissions`, { permissions }),
-
+    api.put(`/staff/${id}/permissions`, permissions),
+  
   activate: (id: string) =>
-    api.post(`/staff/${id}/activate`),
-
+    api.put(`/staff/${id}/activate`),
+  
   deactivate: (id: string) =>
-    api.post(`/staff/${id}/deactivate`),
-
+    api.put(`/staff/${id}/deactivate`),
+  
   remove: (id: string) =>
     api.delete(`/staff/${id}`),
-
+  
   resetPassword: (id: string) =>
     api.post(`/staff/${id}/reset-password`),
 };
@@ -265,10 +287,10 @@ export const staffAPI = {
 export const alertAPI = {
   getAll: (params?: any) =>
     api.get('/alerts', { params }),
-
+  
   markAsResolved: (id: string) =>
     api.patch(`/alerts/${id}/resolve`),
-
+  
   markAsDismissed: (id: string) =>
     api.patch(`/alerts/${id}/dismiss`),
 };

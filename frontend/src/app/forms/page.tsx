@@ -26,8 +26,31 @@ export default function FormsPage() {
     name: '',
     description: '',
     type: 'INTAKE',
-    fields: [] as any[],
+    config: { fields: [] as any[] },
   });
+
+  const addField = () => {
+    setFormData({
+      ...formData,
+      config: {
+        fields: [
+          ...formData.config.fields,
+          { label: '', type: 'text', required: false }
+        ]
+      }
+    });
+  };
+
+  const updateField = (index: number, key: string, value: any) => {
+    const newFields = [...formData.config.fields];
+    newFields[index] = { ...newFields[index], [key]: value };
+    setFormData({ ...formData, config: { fields: newFields } });
+  };
+
+  const removeField = (index: number) => {
+    const newFields = formData.config.fields.filter((_, i) => i !== index);
+    setFormData({ ...formData, config: { fields: newFields } });
+  };
 
   useEffect(() => {
     loadForms();
@@ -77,8 +100,10 @@ export default function FormsPage() {
 
   const loadSubmissions = async (formId: string) => {
     try {
-      const response = await formAPI.getSubmissions(formId);
-      setSubmissions(response.data.data);
+      // Get form details first to show form-specific submissions
+      const formResponse = await formAPI.getById(formId);
+      const formSubmissions = formResponse.data.data.submissions || [];
+      setSubmissions(formSubmissions);
       setShowSubmissions(true);
     } catch (error) {
       setAlert({ type: 'error', message: handleApiError(error) });
@@ -90,7 +115,7 @@ export default function FormsPage() {
       name: '',
       description: '',
       type: 'INTAKE',
-      fields: [],
+      config: { fields: [] },
     });
   };
 
@@ -100,7 +125,7 @@ export default function FormsPage() {
       name: form.name,
       description: form.description || '',
       type: form.type,
-      fields: form.fields || [],
+      config: form.config || { fields: [] },
     });
     setShowModal(true);
   };
@@ -257,11 +282,10 @@ export default function FormsPage() {
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
               >
+                <option value="CONTACT">Contact Form</option>
                 <option value="INTAKE">Intake Form</option>
                 <option value="AGREEMENT">Agreement</option>
-                <option value="CONSENT">Consent Form</option>
-                <option value="FEEDBACK">Feedback</option>
-                <option value="OTHER">Other</option>
+                <option value="CUSTOM">Custom Form</option>
               </select>
             </div>
 
@@ -278,6 +302,62 @@ export default function FormsPage() {
                   setFormData({ ...formData, description: e.target.value })
                 }
               />
+            </div>
+
+            {/* Form Fields Builder */}
+            <div className="pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-medium text-gray-900">Form Fields</h4>
+                <Button type="button" size="sm" variant="secondary" onClick={addField}>
+                  Add Field
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                {formData.config.fields.map((field, index) => (
+                  <div key={index} className="p-3 bg-gray-50 rounded-lg space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        label="Label"
+                        placeholder="Field label"
+                        value={field.label}
+                        onChange={(e) => updateField(index, 'label', e.target.value)}
+                      />
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                        <select
+                          className="input"
+                          value={field.type}
+                          onChange={(e) => updateField(index, 'type', e.target.value)}
+                        >
+                          <option value="text">Text</option>
+                          <option value="textarea">Textarea</option>
+                          <option value="email">Email</option>
+                          <option value="number">Number</option>
+                          <option value="date">Date</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 text-primary-600 rounded"
+                          checked={field.required}
+                          onChange={(e) => updateField(index, 'required', e.target.checked)}
+                        />
+                        <span className="text-sm text-gray-700">Required</span>
+                      </label>
+                      <Button type="button" size="sm" variant="danger" onClick={() => removeField(index)}>
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {formData.config.fields.length === 0 && (
+                  <p className="text-sm text-gray-500 text-center py-4">No fields added yet</p>
+                )}
+              </div>
             </div>
           </form>
         </Modal>
@@ -305,7 +385,7 @@ export default function FormsPage() {
                     </Badge>
                   </div>
                   <p className="text-sm text-gray-600">
-                    Submitted {formatDate(submission.submittedAt, 'MMM dd, yyyy h:mm a')}
+                    Submitted {formatDate(submission.completedAt || submission.createdAt, 'MMM dd, yyyy h:mm a')}
                   </p>
                 </div>
               ))
