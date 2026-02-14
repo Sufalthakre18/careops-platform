@@ -62,7 +62,11 @@ export const emitToWorkspace = (workspaceId, event, data) => {
 // MIDDLEWARE
 // ==============================
 
-app.use(cors());
+// Update CORS configuration
+app.use(cors({
+  origin: process.env.FRONTEND_URL || '*',
+  credentials: true,
+}));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
