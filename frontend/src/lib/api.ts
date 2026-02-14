@@ -140,7 +140,7 @@ export const contactAPI = {
     api.get(`/contacts/${id}`),
 
   create: (data: any) =>
-    api.post('/contacts', data),
+  api.post('/contacts/admin', data), 
 
   update: (id: string, data: any) =>
     api.put(`/contacts/${id}`, data),
@@ -288,11 +288,29 @@ export const alertAPI = {
   getAll: (params?: any) =>
     api.get('/alerts', { params }),
   
-  markAsResolved: (id: string) =>
-    api.patch(`/alerts/${id}/resolve`),
+  getSummary: () =>
+    api.get('/alerts/summary'),
   
-  markAsDismissed: (id: string) =>
-    api.patch(`/alerts/${id}/dismiss`),
+  getById: (id: string) =>
+    api.get(`/alerts/${id}`),
+  
+  create: (data: any) =>
+    api.post('/alerts', data),
+  
+  acknowledge: (id: string) =>
+    api.put(`/alerts/${id}/acknowledge`),
+  
+  resolve: (id: string) =>
+    api.put(`/alerts/${id}/resolve`),
+  
+  delete: (id: string) =>
+    api.delete(`/alerts/${id}`),
+  
+  bulkAcknowledge: (alertIds: string[]) =>
+    api.put('/alerts/bulk/acknowledge', { alertIds }),
+  
+  bulkResolve: (alertIds: string[]) =>
+    api.put('/alerts/bulk/resolve', { alertIds }),
 };
 
 export default api;

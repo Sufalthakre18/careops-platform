@@ -158,7 +158,15 @@ export default function SettingsPage() {
 
           {workspaceStatus !== 'ACTIVE' && (
             <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-              Your workspace must be activated before creating bookings.
+              <p className="font-medium mb-2">⚠️ Activation Requirements:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>At least one communication channel (Email or SMS) must be configured</li>
+                <li>Contact form must be configured (create at least 1 contact)</li>
+                <li>At least one booking type must be created</li>
+              </ul>
+              <p className="mt-3 text-xs italic">
+                Note: Creating a contact will automatically mark the contact form as configured.
+              </p>
             </div>
           )}
         </Card>

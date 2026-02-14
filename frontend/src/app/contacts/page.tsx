@@ -71,17 +71,28 @@ export default function ContactsPage() {
     setSubmitting(true);
     setModalError(null);
 
-    const payload = {
-      ...formData,
-      workspaceId,
-    };
-
     try {
       if (selectedContact) {
-        await contactAPI.update(selectedContact.id, payload);
+        // ✅ UPDATE → send only allowed fields
+        await contactAPI.update(selectedContact.id, {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+        });
+
         setAlert({ type: 'success', message: 'Contact updated successfully!' });
       } else {
-        await contactAPI.create(payload);
+        // ✅ CREATE → include workspaceId
+        await contactAPI.create({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          message: formData.message, // allowed for create
+          workspaceId,
+        });
+
         setAlert({ type: 'success', message: 'Contact created successfully!' });
       }
 
@@ -94,11 +105,12 @@ export default function ContactsPage() {
         error?.message ||
         'Something went wrong';
 
-      setModalError(message); // 🔥 Show inside modal
+      setModalError(message);
     } finally {
       setSubmitting(false);
     }
   };
+
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this contact?')) return;
@@ -317,19 +329,24 @@ export default function ContactsPage() {
               }
             />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Message
-              </label>
-              <textarea
-                className="w-full border rounded-lg p-2"
-                rows={3}
-                value={formData.message}
-                onChange={(e) =>
-                  setFormData({ ...formData, message: e.target.value })
-                }
-              />
-            </div>
+            {/* Show Message ONLY when creating contact */}
+            {!selectedContact && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Message
+                </label>
+                <textarea
+                  className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                  rows={3}
+                  placeholder="Optional message from contact..."
+                  value={formData.message}
+                  onChange={(e) =>
+                    setFormData({ ...formData, message: e.target.value })
+                  }
+                />
+              </div>
+            )}
+
 
             <div className="flex justify-end space-x-3 pt-4">
               <Button type="button" variant="secondary" onClick={closeModal}>
@@ -340,8 +357,8 @@ export default function ContactsPage() {
                 {submitting
                   ? 'Please wait...'
                   : selectedContact
-                  ? 'Update'
-                  : 'Create'}
+                    ? 'Update'
+                    : 'Create'}
               </Button>
             </div>
 

@@ -11,7 +11,8 @@ import Loading from '@/components/ui/Loading';
 import Alert from '@/components/ui/Alert';
 import { formAPI } from '@/lib/api';
 import { formatDate, handleApiError } from '@/lib/utils';
-import { FileText, Plus, Eye } from 'lucide-react';
+import { FileText, Plus, Eye, Settings } from 'lucide-react';
+import Link from 'next/link';
 
 export default function FormsPage() {
   const [forms, setForms] = useState<any[]>([]);
@@ -146,17 +147,25 @@ export default function FormsPage() {
             <h1 className="text-3xl font-bold text-gray-900">Forms</h1>
             <p className="text-gray-600 mt-1">Manage customer forms and submissions</p>
           </div>
-          <Button
-            variant="primary"
-            onClick={() => {
-              setSelectedForm(null);
-              resetForm();
-              setShowModal(true);
-            }}
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            New Form
-          </Button>
+          <div className="flex items-center space-x-3">
+            <Link href="/forms/submissions">
+              <Button variant="secondary">
+                <Eye className="w-5 h-5 mr-2" />
+                View All Submissions
+              </Button>
+            </Link>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setSelectedForm(null);
+                resetForm();
+                setShowModal(true);
+              }}
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              New Form
+            </Button>
+          </div>
         </div>
 
         {alert && (
@@ -188,21 +197,22 @@ export default function FormsPage() {
                   </div>
 
                   <div className="flex items-center space-x-2">
+                    <Link href={`/forms/${form.id}`} className="flex-1">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="w-full"
+                      >
+                        <Settings className="w-4 h-4 mr-1" />
+                        Configure
+                      </Button>
+                    </Link>
                     <Button
                       size="sm"
                       variant="ghost"
                       onClick={() => loadSubmissions(form.id)}
-                      className="flex-1"
                     >
-                      <Eye className="w-4 h-4 mr-1" />
-                      View
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => openEditModal(form)}
-                    >
-                      Edit
+                      <Eye className="w-4 h-4" />
                     </Button>
                     <Button
                       size="sm"

@@ -171,7 +171,7 @@ router.get(
     [
         query('status').optional().isIn(['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW']),
         query('page').optional().isInt({ min: 1 }),
-        query('limit').optional().isInt({ min: 1, max: 100 }),
+        query('li mit').optional().isInt({ min: 1, max: 100 }),
         validate,
     ],
     asyncHandler(bookingController.getBookings)

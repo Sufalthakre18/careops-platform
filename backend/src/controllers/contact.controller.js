@@ -117,6 +117,33 @@ export const createContact = async (req, res) => {
   });
 };
 
+export const createContactAdmin = async (req, res) => {
+  const { email, firstName, lastName, phone } = req.body;
+
+  const contact = await prisma.contact.create({
+    data: {
+      workspaceId: req.workspaceId,
+      email,
+      firstName,
+      lastName,
+      phone,
+      status: 'NEW',
+    },
+  });
+
+  // ✅ Set contactFormSetup flag
+  await prisma.workspace.update({
+    where: { id: req.workspaceId },
+    data: { contactFormSetup: true },
+  });
+
+  res.status(201).json({
+    success: true,
+    message: 'Contact created successfully',
+    data: contact,
+  });
+};
+
 /**
  * Get all contacts
  */
@@ -207,6 +234,7 @@ export const getContactById = async (req, res) => {
 export const updateContact = async (req, res) => {
   const { id } = req.params;
 
+  // Check if contact exists and belongs to workspace
   const existingContact = await prisma.contact.findUnique({
     where: { id },
   });
@@ -215,14 +243,67 @@ export const updateContact = async (req, res) => {
     throw new ApiError(404, 'Contact not found');
   }
 
+  // Whitelist only allowed fields
+  const { firstName, lastName, email, phone, status } = req.body;
+
   const contact = await prisma.contact.update({
     where: { id },
-    data: req.body,
+    data: {
+      ...(firstName !== undefined && { firstName }),
+      ...(lastName !== undefined && { lastName }),
+      ...(email !== undefined && { email }),
+      ...(phone !== undefined && { phone }),
+      ...(status !== undefined && { status }),
+    },
   });
 
   res.json({
     success: true,
     message: 'Contact updated successfully',
     data: contact,
+  });
+};
+
+/**
+ * Delete contact
+ */
+export const deleteContact = async (req, res) => {
+  const { id } = req.params;
+
+  // Check if contact exists and belongs to workspace
+  const existingContact = await prisma.contact.findUnique({
+    where: { id },
+  });
+
+  if (!existingContact || existingContact.workspaceId !== req.workspaceId) {
+    throw new ApiError(404, 'Contact not found');
+  }
+
+  // Delete related data first (important if no cascade in schema)
+  await prisma.$transaction([
+    prisma.message.deleteMany({
+      where: {
+        conversation: {
+          contactId: id,
+        },
+      },
+    }),
+    prisma.conversation.deleteMany({
+      where: { contactId: id },
+    }),
+    prisma.booking.deleteMany({
+      where: { contactId: id },
+    }),
+    prisma.formSubmission.deleteMany({
+      where: { contactId: id },
+    }),
+    prisma.contact.delete({
+      where: { id },
+    }),
+  ]);
+
+  res.json({
+    success: true,
+    message: 'Contact deleted successfully',
   });
 };

@@ -33,8 +33,6 @@ export const createBookingType = async (req, res) => {
     data: { bookingSetup: true },
   });
 
- console.info(`Booking type created: ${bookingType.id}`);
-
   res.status(201).json({
     success: true,
     message: 'Booking type created successfully',

@@ -55,14 +55,26 @@ export default function InventoryPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     try {
       if (selectedItem) {
-        await inventoryAPI.update(selectedItem.id, formData);
+        // EDIT → only send allowed fields
+        await inventoryAPI.update(selectedItem.id, {
+          name: formData.name,
+          description: formData.description,
+          lowStockThreshold: formData.lowStockThreshold,
+          vendorName: formData.vendorName,
+          vendorEmail: formData.vendorEmail,
+          vendorPhone: formData.vendorPhone,
+        });
+
         setAlert({ type: 'success', message: 'Item updated successfully!' });
       } else {
+        // CREATE → send full data
         await inventoryAPI.create(formData);
         setAlert({ type: 'success', message: 'Item created successfully!' });
       }
+
       setShowModal(false);
       setSelectedItem(null);
       resetForm();
@@ -71,6 +83,7 @@ export default function InventoryPage() {
       setAlert({ type: 'error', message: handleApiError(error) });
     }
   };
+
 
   const handleAdjust = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -297,6 +310,8 @@ export default function InventoryPage() {
           }
         >
           <form onSubmit={handleSubmit} className="space-y-4">
+
+            {/* NAME */}
             <Input
               label="Item Name"
               placeholder="e.g., Surgical Gloves"
@@ -305,13 +320,7 @@ export default function InventoryPage() {
               required
             />
 
-            <Input
-              label="SKU"
-              placeholder="e.g., SKU-001"
-              value={formData.sku}
-              onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-            />
-
+            {/* DESCRIPTION */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Description
@@ -325,53 +334,84 @@ export default function InventoryPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                type="number"
-                label="Quantity"
-                placeholder="0"
-                value={formData.quantity}
-                onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
-                required
-              />
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Unit
-                </label>
-                <select
-                  className="input"
-                  value={formData.unit}
-                  onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                >
-                  <option value="PIECE">Piece</option>
-                  <option value="BOX">Box</option>
-                  <option value="BOTTLE">Bottle</option>
-                  <option value="PACK">Pack</option>
-                  <option value="KG">Kilogram</option>
-                  <option value="LITER">Liter</option>
-                  <option value="OTHER">Other</option>
-                </select>
-              </div>
-            </div>
+            {/* SHOW THESE ONLY WHEN CREATING */}
+            {!selectedItem && (
+              <>
+                <Input
+                  label="SKU"
+                  placeholder="e.g., SKU-001"
+                  value={formData.sku}
+                  onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                />
 
+                <div className="grid grid-cols-2 gap-4">
+                  <Input
+                    type="number"
+                    label="Initial Quantity"
+                    placeholder="0"
+                    value={formData.quantity}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        quantity: parseInt(e.target.value) || 0,
+                      })
+                    }
+                    required
+                  />
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Unit
+                    </label>
+                    <select
+                      className="input"
+                      value={formData.unit}
+                      onChange={(e) =>
+                        setFormData({ ...formData, unit: e.target.value })
+                      }
+                    >
+                      <option value="PIECE">Piece</option>
+                      <option value="BOX">Box</option>
+                      <option value="BOTTLE">Bottle</option>
+                      <option value="PACK">Pack</option>
+                      <option value="KG">Kilogram</option>
+                      <option value="LITER">Liter</option>
+                      <option value="OTHER">Other</option>
+                    </select>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* LOW STOCK THRESHOLD */}
             <Input
               type="number"
               label="Low Stock Threshold"
               placeholder="10"
               value={formData.lowStockThreshold}
-              onChange={(e) => setFormData({ ...formData, lowStockThreshold: parseInt(e.target.value) || 0 })}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  lowStockThreshold: parseInt(e.target.value) || 0,
+                })
+              }
               required
             />
 
+            {/* VENDOR INFO */}
             <div className="pt-4 border-t border-gray-200">
-              <h4 className="font-medium text-gray-900 mb-3">Vendor Information</h4>
-              
+              <h4 className="font-medium text-gray-900 mb-3">
+                Vendor Information
+              </h4>
+
               <div className="space-y-4">
                 <Input
                   label="Vendor Name"
                   placeholder="Vendor name"
                   value={formData.vendorName}
-                  onChange={(e) => setFormData({ ...formData, vendorName: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, vendorName: e.target.value })
+                  }
                 />
 
                 <div className="grid grid-cols-2 gap-4">
@@ -380,19 +420,25 @@ export default function InventoryPage() {
                     label="Vendor Email"
                     placeholder="vendor@example.com"
                     value={formData.vendorEmail}
-                    onChange={(e) => setFormData({ ...formData, vendorEmail: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, vendorEmail: e.target.value })
+                    }
                   />
                   <Input
                     type="tel"
                     label="Vendor Phone"
                     placeholder="+1 (555) 123-4567"
                     value={formData.vendorPhone}
-                    onChange={(e) => setFormData({ ...formData, vendorPhone: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, vendorPhone: e.target.value })
+                    }
                   />
                 </div>
               </div>
             </div>
+
           </form>
+
         </Modal>
 
         {/* Adjust Stock Modal */}

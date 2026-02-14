@@ -186,11 +186,24 @@ export default function BookingsPage() {
             <p className="text-gray-500">Manage all appointments</p>
           </div>
 
-          <Button onClick={handleNewBookingClick}>
-            <Plus className="w-4 h-4 mr-2" />
-            New Booking
-          </Button>
+          <div className="flex gap-3">
+            {/* OWNER ONLY BUTTON */}
+            {user?.role === 'OWNER' && (
+              <Button
+                variant="secondary"
+                onClick={() => router.push('/bookings/admin')}
+              >
+                Manage Booking Types
+              </Button>
+            )}
+
+            <Button onClick={handleNewBookingClick}>
+              <Plus className="w-4 h-4 mr-2" />
+              New Booking
+            </Button>
+          </div>
         </div>
+
 
         {/* ALERT */}
         {alert && (

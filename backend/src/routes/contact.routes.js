@@ -22,6 +22,9 @@ contactRouter.post(
   asyncHandler(contactController.createContact)
 );
 
+
+
+
 // Get all contacts
 contactRouter.get(
   '/',
@@ -29,6 +32,21 @@ contactRouter.get(
   requirePermission('canManageContacts'),
   [query('page').optional().isInt(), query('limit').optional().isInt(), validate],
   asyncHandler(contactController.getContacts)
+);
+
+// Add BEFORE the '/:id' route:
+contactRouter.post(
+  '/admin',
+  authenticate,
+  requirePermission('canManageContacts'),
+  [
+    body('email').isEmail(),
+    body('firstName').optional(),
+    body('lastName').optional(),
+    body('phone').optional(),
+    validate,
+  ],
+  asyncHandler(contactController.createContactAdmin)
 );
 
 // Get contact by ID
@@ -47,5 +65,14 @@ contactRouter.put(
 );
 
 export default contactRouter;
+
+// Delete contact
+contactRouter.delete(
+  '/:id',
+  authenticate,
+  requirePermission('canManageContacts'),
+  asyncHandler(contactController.deleteContact)
+);
+
 
 // tested all apis
